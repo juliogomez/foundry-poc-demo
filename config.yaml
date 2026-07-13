@@ -1,0 +1,72 @@
+# Foundry PoC Demo configuration - THE CANONICAL RUN (wide scope).
+#
+# Every knob here maps to a decision the Foundry seed leaves open as a
+# [NEEDS CLARIFICATION] marker (see docs/CUSTOMIZATION.md). This file IS the
+# "customized spec" for this PoC, expressed as runtime config.
+#
+# Scope = the ENTIRE Langflow v1 HTTP attack surface (all 25 request-handler
+# modules, ~289 function-level units) plus the one helper carrying a real
+# compile()/exec() sink. A smaller, hand-curated 12-module slice lives in
+# config-narrow.yaml as a scale contrast (run it with `--config config-narrow.yaml`).
+
+system:
+  name: "foundry-poc"
+
+target:
+  # The software under evaluation. Fetched by scripts/fetch_target.sh (never vendored).
+  path: "targets/langflow"
+  # Whole v1 request-handler layer + the compile/exec helper. Widen or narrow by
+  # editing these globs (see config-narrow.yaml for a curated subset example).
+  include_globs:
+    - "src/backend/base/langflow/api/v1/*.py"
+    - "src/backend/base/langflow/helpers/flow.py"
+  exclude_globs:
+    - "**/tests/**"
+    - "**/__pycache__/**"
+  # Pinned so anyone re-running gets the same code (reproducibility).
+  pinned_ref: "1.7.3"
+
+goals: |
+  Evaluate the target for server-side security defects reachable from external
+  input across the FULL v1 API surface: code/command injection, SQL injection,
+  SSRF, path traversal, unsafe deserialization, hardcoded secrets, missing authz,
+  IDOR, header injection, error-info leakage, and sensitive-data exposure.
+  In scope: all first-party v1 request handlers. Out of scope: frontend, tests, deps.
+
+llm:
+  # Backend is the Cursor SDK (works with a Cursor license; no separate API key).
+  # Model is confirmed against `Cursor.models.list()` at run time; run
+  # `python -m foundry_poc.cli models` once CURSOR_API_KEY is set to see valid slugs.
+  backend: "cursor"
+  model: "claude-sonnet-4-6"
+  # Point the agent at an empty scratch dir for pure-completion calls so it does
+  # not wander the filesystem; we pass code inline in the prompt.
+  scratch_cwd: ".scratch"
+
+batching:
+  # The Cursor SDK runs each call as a full agent with a large, fixed system-prompt
+  # overhead, so cost is per-CALL, not per-unit. We pack many units per call to
+  # amortize it. Content is cheap; overhead is not.
+  detector_max_units: 25
+  detector_max_lines: 1200
+  triage_batch_size: 20
+
+budget:
+  # Constitution VI: bounded spend. Hard cap; the run halts cleanly when crossed.
+  # The full v1 sweep lands around ~2.05M tokens, well under this.
+  max_tokens: 6000000
+  yield_window: 12
+  yield_min_true_positive_rate: 0.05
+
+severity:
+  # Reporter rubric (policy choice). CVSS-ish buckets keyed off weakness class + reachability.
+  scheme: "low_medium_high_critical"
+
+rules:
+  corpus_dir: "rules"
+
+store:
+  db_path: "out/findings.db"
+  provenance_log: "out/provenance.jsonl"
+  reports_dir: "out/findings"
+  rule_gaps_log: "out/rule-gaps.jsonl"

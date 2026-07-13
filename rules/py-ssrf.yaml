@@ -1,0 +1,25 @@
+id: codeguard-py-ssrf
+description: |
+  Detect server-side HTTP/network requests whose destination URL/host is taken
+  from external input without allowlisting or blocking internal/link-local
+  ranges. Maps to CWE-918 (Server-Side Request Forgery).
+languages: [python]
+severity: high
+weakness_class: CWE-918
+applies_to:
+  - calls to requests/httpx/urllib/aiohttp (get/post/request/open) where the URL
+    argument is caller-supplied
+trigger_when:
+  - the URL or host is, or derives from, external input
+  - and there is no scheme restriction, domain/IP allowlist, or blocking of
+    private/loopback/link-local addresses, and redirects are not constrained
+example_positive: |
+  def fetch(url):
+      return httpx.get(url)   # url is attacker-controlled
+example_negative: |
+  ALLOWED = {"api.partner.com"}
+  def fetch(url):
+      host = urlparse(url).hostname
+      if host not in ALLOWED:
+          raise ValueError("host not allowed")
+      return httpx.get(url, follow_redirects=False)

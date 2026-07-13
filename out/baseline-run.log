@@ -1,0 +1,15 @@
+{
+  "run_id": "base_65501a94d97f",
+  "target": "langflow",
+  "pinned_ref": "1.7.3",
+  "model": "claude-sonnet-4-6",
+  "backend": "cursor",
+  "files_in_scope": 26,
+  "total_tokens": 213121,
+  "duration_s": 472.8,
+  "parse_ok": true,
+  "raw_findings": 15
+}
+
+baseline raw:        /Users/jgomez2/dev/foundry-poc-demo/out-wide/baseline-base_65501a94d97f-raw.txt
+baseline normalized: /Users/jgomez2/dev/foundry-poc-demo/out-wide/baseline-base_65501a94d97f.json

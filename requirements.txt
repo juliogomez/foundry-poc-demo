@@ -1,0 +1,6 @@
+# LLM backend: run Cursor agents programmatically with your existing Cursor license.
+# Auth via CURSOR_API_KEY (minted at Cursor Dashboard -> Integrations). No hardcoded secrets.
+cursor-sdk
+
+# Config + data handling
+PyYAML>=6.0

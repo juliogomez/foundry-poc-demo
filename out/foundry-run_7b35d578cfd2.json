@@ -1,0 +1,1827 @@
+{
+  "run_id": "run_7b35d578cfd2",
+  "meta": {
+    "target": "langflow",
+    "pinned_ref": "1.7.3",
+    "model": "claude-sonnet-4-6",
+    "backend": "cursor",
+    "units_analyzed": 289,
+    "candidates": 61,
+    "total_tokens": 2053308,
+    "max_tokens": 6000000,
+    "stop_reason": "coverage-complete (all 289 units); trailing true-positive yield=0.67"
+  },
+  "budget": {
+    "calls": 16,
+    "input_tokens": 1003679,
+    "output_tokens": 45998,
+    "total_tokens": 2053308,
+    "max_tokens": 6000000,
+    "exhausted": false
+  },
+  "raw_candidate_count": 61,
+  "reported_findings": [
+    {
+      "file": "src/backend/base/langflow/api/v1/flows.py",
+      "line": 411,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_04b30dd2886b9dab",
+      "symbol": "read_public_flow",
+      "title": "read_public_flow is intentionally unauthenticated with access_type guard",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 411,
+          "quote": "    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 412,
+          "quote": "    if access_type is not AccessTypeEnum.PUBLIC:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 413,
+          "quote": "        raise HTTPException(status_code=403, detail=\"Flow is not public\")",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+      "line": 295,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_121ebaa17e0cab24",
+      "symbol": "handle_call_tool.execute_tool",
+      "title": "Internal exception detail returned verbatim to MCP client (nested function duplicate)",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 295,
+          "quote": "except Exception as e:  # noqa: BLE001",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 296,
+          "quote": "error_msg = f\"Error Executing the {flow.name} tool. Error: {e!s}\"",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 297,
+          "quote": "collected_results.append(types.TextContent(type=\"text\", text=error_msg))",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/login.py",
+      "line": 91,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_1895ac537897ffdb",
+      "symbol": "auto_login",
+      "title": "auto_login is intentionally unauthenticated by design",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 91,
+          "quote": "if auth_settings.AUTO_LOGIN:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 124,
+          "quote": "raise HTTPException(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 127,
+          "quote": "\"message\": \"Auto login is disabled. Please enable it in the settings\",",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/login.py",
+      "line": 61,
+      "class": "CWE-312",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_1bca95fb88122b82",
+      "symbol": "login_to_get_access_token",
+      "title": "store_api_key cookie \u2014 intentional client-side delivery",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 61,
+          "quote": "\"apikey_tkn_lflw\",",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 62,
+          "quote": "str(user.store_api_key),",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 862,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_1f34a2a28a4b7493",
+      "symbol": "install_mcp_config",
+      "title": "Generic str(e) on broad except Exception \u2014 systemic pattern, excluded by rule",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 862,
+          "quote": "except HTTPException:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 864,
+          "quote": "except Exception as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 867,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/folders.py",
+      "line": 78,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_32f07af1c8d9f761",
+      "symbol": "delete_folder_redirect",
+      "title": "Delete redirect handler \u2014 authorization enforced at destination",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 78,
+          "quote": "return RedirectResponse(url=f\"/api/v1/projects/{folder_id}\", status_code=status.HTTP_307_TEMPORARY_REDIRECT)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+      "line": 177,
+      "class": "CWE-22",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "fingerprint": "fp_3c810b1f8ac7f2c9",
+      "symbol": "handle_read_resource",
+      "title": "URL-decoded filename from caller URI passed to storage service without sanitization",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 177,
+          "quote": "filename = unquote(path_parts[-1])  # URL decode the filename",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 182,
+          "quote": "content = await storage_service.get_file(flow_id=flow_id, file_name=filename)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/flows.py",
+      "line": 676,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_3e3e012805fb63df",
+      "symbol": "read_basic_examples",
+      "title": "read_basic_examples is intentionally public starter content",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 676,
+          "quote": "        starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 682,
+          "quote": "        all_starter_folder_flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 108,
+      "class": "CWE-113",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "fingerprint": "fp_44d49ed412ca4dad",
+      "symbol": "download_file",
+      "title": "Potential header injection via unquoted filename in Content-Disposition",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 108,
+          "quote": "    file_name: ValidatedFileName,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 129,
+          "quote": "            \"Content-Disposition\": f\"attachment; filename={file_name} filename*=UTF-8''{file_name}\",",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 177,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_48c52c96c687b21a",
+      "symbol": "delete_messages_session",
+      "title": "delete_messages_session has no authenticated user or ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 177,
+          "quote": "async def delete_messages_session(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 184,
+          "quote": ".where(col(MessageTable.session_id) == session_id)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+      "line": 596,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_4a135cdbe6041f77",
+      "symbol": "create_response",
+      "title": "Internal exception detail returned verbatim in OpenAI error response body",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 596,
+          "quote": "except Exception as exc:  # noqa: BLE001",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 612,
+          "quote": "error_response = create_openai_error(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 613,
+          "quote": "message=str(exc),",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 616,
+          "quote": "return OpenAIErrorResponse(error=error_response[\"error\"])",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/projects.py",
+      "line": 597,
+      "class": "CWE-639",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_4a5a839422d07592",
+      "symbol": "download_file",
+      "title": "Folder ownership is verified before flows query",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/projects.py",
+          "line": 597,
+          "quote": "query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/projects.py",
+          "line": 601,
+          "quote": "if not project:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/projects.py",
+          "line": 602,
+          "quote": "raise HTTPException(status_code=404, detail=\"Project not found\")",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+      "line": 394,
+      "class": "CWE-22",
+      "severity": "critical",
+      "verdict": "true-positive",
+      "fingerprint": "fp_4b8f78034b4f3cd6",
+      "symbol": "delete_knowledge_base",
+      "title": "Path traversal + arbitrary directory deletion in delete_knowledge_base",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 394,
+          "quote": "kb_path = kb_root_path / kb_user / kb_name",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 400,
+          "quote": "shutil.rmtree(kb_path)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 252,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_511ce69c8d463dbb",
+      "symbol": "list_profile_pictures",
+      "title": "Listing profile picture names is low-sensitivity and likely intentional",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 252,
+          "quote": "        allowed_folders = _get_allowed_profile_picture_folders(settings_service)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 260,
+          "quote": "                    results += [f\"{folder}/{f.name}\" for f in p.iterdir() if f.is_file()]",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 274,
+          "quote": "    return {\"files\": results}",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/variable.py",
+      "line": 104,
+      "class": "CWE-639",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_55006b933e7be216",
+      "symbol": "delete_variable",
+      "title": "user_id ownership filter is explicitly passed to the service layer",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/variable.py",
+          "line": 104,
+          "quote": "await variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 1104,
+      "class": "CWE-22",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_58c43785e7bfcbe3",
+      "symbol": "get_config_path",
+      "title": "Windows username from OS, not attacker-supplied input",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 1104,
+          "quote": "\"echo %USERNAME%\",",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 1111,
+          "quote": "windows_username = stdout.decode().strip()",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 1113,
+          "quote": "f\"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json\"",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/endpoints.py",
+      "line": 612,
+      "class": "CWE-862",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "fingerprint": "fp_5e1278a4cf63b5d9",
+      "symbol": "webhook_run_flow",
+      "title": "Webhook endpoint may allow unauthenticated flow execution",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 612,
+          "quote": "async def webhook_run_flow(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 638,
+          "quote": "    webhook_user = await get_webhook_user(flow_id_or_name, request)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 667,
+          "quote": "        background_tasks.add_task(",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/store.py",
+      "line": 36,
+      "class": "CWE-312",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_5e63d5868c3fed69",
+      "symbol": "get_optional_user_store_api_key",
+      "title": "Raw undecrypted store API key returned to caller on decryption failure",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/store.py",
+          "line": 36,
+          "quote": "return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/store.py",
+          "line": 37,
+          "quote": "except Exception:  # noqa: BLE001",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/store.py",
+          "line": 39,
+          "quote": "return user.store_api_key",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 105,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_5fc6e8be5a84da52",
+      "symbol": "delete_messages",
+      "title": "delete_messages has no authenticated user or ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 105,
+          "quote": "async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 107,
+          "quote": "await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+      "line": 1146,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_62e5209b0b654b8a",
+      "symbol": "flow_tts_websocket",
+      "title": "IDOR: flow executed without ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 1146,
+          "quote": "flow_id: str,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 1200,
+          "quote": "current_user: User = await get_current_user_for_websocket(client_websocket, session)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 1254,
+          "quote": "response = await build_flow_and_stream(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 1255,
+          "quote": "flow_id=UUID(flow_id),",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/chat.py",
+      "line": 202,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_63a72ec086c700d9",
+      "symbol": "get_build_events",
+      "title": "IDOR: build events retrievable for any job_id without ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 202,
+          "quote": "async def get_build_events(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 203,
+          "quote": "    job_id: str,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 212,
+          "quote": "    return await get_flow_events_response(",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/variable.py",
+      "line": 81,
+      "class": "CWE-639",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_6891a4a850ef6aa5",
+      "symbol": "update_variable",
+      "title": "user_id ownership filter is explicitly passed to the service layer",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/variable.py",
+          "line": 81,
+          "quote": "return await variable_service.update_variable_fields(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/variable.py",
+          "line": 82,
+          "quote": "user_id=current_user.id,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/variable.py",
+          "line": 83,
+          "quote": "variable_id=variable_id,",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/validate.py",
+      "line": 49,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_6996f6717d0c2f40",
+      "symbol": "post_validate_prompt",
+      "title": "Generic HTTPException(500, str(e)) pattern excluded by do_not_trigger_when",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 49,
+          "quote": "except Exception as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 50,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/folders.py",
+      "line": 41,
+      "class": "CWE-113",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_6edb551ef5493d92",
+      "symbol": "read_folder_redirect",
+      "title": "CRLF/header injection via unencoded 'search' query parameter in redirect URL",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 41,
+          "quote": "search: str = \"\",",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 51,
+          "quote": "params_list.append(f\"search={search}\")",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 58,
+          "quote": "redirect_url += \"?\" + \"&\".join(params_list)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 60,
+          "quote": "return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 578,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_727e8a44c61b7a68",
+      "symbol": "update_project_mcp_settings",
+      "title": "Generic str(e) on broad except Exception \u2014 systemic pattern, excluded by rule",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 578,
+          "quote": "except Exception as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 585,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/validate.py",
+      "line": 21,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_732cab8db8a11465",
+      "symbol": "post_validate_code",
+      "title": "Generic HTTPException(500, str(e)) pattern excluded by do_not_trigger_when",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 21,
+          "quote": "except Exception as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 23,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+      "line": 718,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_76cff8c1b3b5cfbe",
+      "symbol": "flow_as_tool_websocket",
+      "title": "IDOR: flow description retrieved without ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 718,
+          "quote": "flow_id: str,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 731,
+          "quote": "current_user: User = await get_current_user_for_websocket(client_websocket, session)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 736,
+          "quote": "flow_description = await get_flow_desc_from_db(flow_id)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 181,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_7949770cff45b81d",
+      "symbol": "download_profile_picture",
+      "title": "Profile picture download is intentionally unauthenticated",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 181,
+          "quote": "        if \"..\" in folder_name or \"..\" in file_name:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 187,
+          "quote": "        allowed_folders = _get_allowed_profile_picture_folders(settings_service)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 188,
+          "quote": "        if folder_name not in allowed_folders:",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+      "line": 295,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_7a6bea2498c029e0",
+      "symbol": "handle_call_tool",
+      "title": "Internal exception detail returned verbatim to MCP client in TextContent",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 295,
+          "quote": "except Exception as e:  # noqa: BLE001",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 296,
+          "quote": "error_msg = f\"Error Executing the {flow.name} tool. Error: {e!s}\"",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 297,
+          "quote": "collected_results.append(types.TextContent(type=\"text\", text=error_msg))",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/api_key.py",
+      "line": 45,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_7f6edfae3c9817dc",
+      "symbol": "delete_api_key_route",
+      "title": "IDOR: API key deleted without ownership verification",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 45,
+          "quote": "async def delete_api_key_route(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 46,
+          "quote": "    api_key_id: UUID,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 47,
+          "quote": "    db: DbSession,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 50,
+          "quote": "        await delete_api_key(db, api_key_id)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+      "line": 421,
+      "class": "CWE-22",
+      "severity": "critical",
+      "verdict": "true-positive",
+      "fingerprint": "fp_868a27aebfd3098f",
+      "symbol": "delete_knowledge_bases_bulk",
+      "title": "Path traversal + bulk arbitrary directory deletion in delete_knowledge_bases_bulk",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 421,
+          "quote": "for kb_name in request.kb_names:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 422,
+          "quote": "kb_path = kb_user_path / kb_name",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 430,
+          "quote": "shutil.rmtree(kb_path)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 75,
+      "class": "CWE-89",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_87630828eb4edee0",
+      "symbol": "get_messages",
+      "title": "Unvalidated caller-supplied order_by string used in dynamic ORM attribute lookup",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 75,
+          "quote": "order_by: Annotated[str | None, Query()] = \"timestamp\",",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 96,
+          "quote": "order_col = getattr(MessageTable, order_by).asc()",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 97,
+          "quote": "stmt = stmt.order_by(order_col)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/chat.py",
+      "line": 340,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_8a27c0f1da990323",
+      "symbol": "build_vertex",
+      "title": "Full stack trace returned to client in vertex build error response",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 340,
+          "quote": "                tb = traceback.format_exc()",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 343,
+          "quote": "            message = {\"errorMessage\": params, \"stackTrace\": tb}",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 347,
+          "quote": "            outputs = {output_label: OutputValue(message=message, type=\"error\")}",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 287,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_8fbd002d25948c1c",
+      "symbol": "_build_project_tools_response",
+      "title": "Generic str(e) on broad except Exception \u2014 systemic pattern, excluded by rule",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 287,
+          "quote": "except Exception as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 290,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/chat.py",
+      "line": 647,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_9b9b5fabb4d608c2",
+      "symbol": "build_public_tmp",
+      "title": "Generic HTTPException(500, str(exc)) pattern \u2014 excluded by do_not_trigger_when",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 647,
+          "quote": "    except Exception as exc:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 651,
+          "quote": "        raise HTTPException(status_code=500, detail=str(exc)) from exc",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/chat.py",
+      "line": 59,
+      "class": "CWE-862",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_9f1d0aefe2bfa68e",
+      "symbol": "retrieve_vertices_order",
+      "title": "Missing authentication on retrieve_vertices_order",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 59,
+          "quote": "async def retrieve_vertices_order(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 61,
+          "quote": "    flow_id: uuid.UUID,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 66,
+          "quote": "    session: DbSession,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 92,
+          "quote": "            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+      "line": 459,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_a048f70503ce322f",
+      "symbol": "handle_function_call",
+      "title": "json.JSONDecodeError messages are generic and do not expose sensitive system internals",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 459,
+          "quote": "except json.JSONDecodeError as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 467,
+          "quote": "\"output\": f\"Error parsing arguments: {e!s}\",",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+      "line": 1368,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_a4be9839eb5d674f",
+      "symbol": "get_elevenlabs_voice_ids",
+      "title": "Network exception message (URL/host) leaked to caller via error response",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 1368,
+          "quote": "except requests.RequestException as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 1370,
+          "quote": "return {\"error\": str(e)}",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 113,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_a7d26ff6ce1b861e",
+      "symbol": "update_message",
+      "title": "update_message has no authenticated user or ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 113,
+          "quote": "async def update_message(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 119,
+          "quote": "db_message = await session.get(MessageTable, message_id)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 130,
+          "quote": "db_message.sqlmodel_update(message_dict)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 143,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_a8a5e0bfe97fd34b",
+      "symbol": "update_session_id",
+      "title": "update_session_id has no authenticated user or ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 143,
+          "quote": "async def update_session_id(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 150,
+          "quote": "stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 161,
+          "quote": "message.session_id = new_session_id",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+      "line": 108,
+      "class": "CWE-312",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_a961d37eb07cb763",
+      "symbol": "authenticate_and_get_openai_key",
+      "title": "OpenAI API key returned for legitimate downstream use, not exposed externally",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 108,
+          "quote": "openai_key = openai_key_value if openai_key_value is not None else os.getenv(\"OPENAI_API_KEY\", \"\")",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/voice_mode.py",
+          "line": 120,
+          "quote": "await logger.aerror(f\"Error with API key: {e}\")",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/endpoints.py",
+      "line": 846,
+      "class": "CWE-862",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_aa1fe95787335300",
+      "symbol": "create_upload_file",
+      "title": "Missing authentication on file upload endpoint",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 846,
+          "quote": "async def create_upload_file(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 847,
+          "quote": "    file: UploadFile,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 848,
+          "quote": "    flow_id: UUID,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 856,
+          "quote": "        file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 670,
+      "class": "CWE-346",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_b70bbc27590946e1",
+      "symbol": "get_client_ip",
+      "title": "X-Forwarded-For header trusted without proxy validation \u2014 IP spoofing",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 670,
+          "quote": "forwarded_for = request.headers.get(\"X-Forwarded-For\")",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 671,
+          "quote": "if forwarded_for:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 673,
+          "quote": "return forwarded_for.split(\",\")[0].strip()",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/folders.py",
+      "line": 87,
+      "class": "CWE-862",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_bb9a06cf3846ad0e",
+      "symbol": "download_file_redirect",
+      "title": "Download redirect handler \u2014 authorization enforced at destination",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 87,
+          "quote": "return RedirectResponse(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/folders.py",
+          "line": 88,
+          "quote": "url=f\"/api/v1/projects/download/{folder_id}\", status_code=status.HTTP_307_TEMPORARY_REDIRECT",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/projects.py",
+      "line": 622,
+      "class": "CWE-113",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_bbb045d7cf6ec02c",
+      "symbol": "download_file",
+      "title": "project.name is URL-encoded via quote() before header insertion",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/projects.py",
+          "line": 622,
+          "quote": "filename = f\"{current_time}_{project.name}_flows.zip\"",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/projects.py",
+          "line": 625,
+          "quote": "encoded_filename = quote(filename)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/projects.py",
+          "line": 630,
+          "quote": "headers={\"Content-Disposition\": f\"attachment; filename*=UTF-8''{encoded_filename}\"}",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/chat.py",
+      "line": 224,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_bc41db85dee8617b",
+      "symbol": "cancel_build",
+      "title": "IDOR: build job cancellable by any caller without ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 224,
+          "quote": "async def cancel_build(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 225,
+          "quote": "    job_id: str,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 234,
+          "quote": "        cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 277,
+      "class": "CWE-312",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_c48c0ff468e8cd6f",
+      "symbol": "_build_project_tools_response",
+      "title": "Speculative secret leak via str(e) \u2014 not substantiated by shown code",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 277,
+          "quote": "decrypted_settings = decrypt_auth_settings(project.auth_settings)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 290,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 139,
+      "class": "CWE-862",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_c51d302382216e50",
+      "symbol": "download_image",
+      "title": "Missing authentication on image download endpoint",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 139,
+          "quote": "async def download_image(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 140,
+          "quote": "    file_name: ValidatedFileName,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 141,
+          "quote": "    flow_id: UUID,",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 161,
+          "quote": "        file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 1032,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_c9864704ecec3b62",
+      "symbol": "check_installed_mcp_servers",
+      "title": "Generic str(e) on broad except Exception \u2014 systemic pattern, excluded by rule",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 1032,
+          "quote": "except Exception as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 1035,
+          "quote": "raise HTTPException(status_code=500, detail=str(e)) from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+      "line": 354,
+      "class": "CWE-22",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_caaa8779720563a5",
+      "symbol": "get_knowledge_base",
+      "title": "Path traversal in get_knowledge_base via unvalidated kb_name",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 354,
+          "quote": "async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 359,
+          "quote": "kb_path = kb_root_path / kb_user / kb_name",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 361,
+          "quote": "if not kb_path.exists() or not kb_path.is_dir():",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 789,
+      "class": "CWE-312",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "fingerprint": "fp_cdafff7e10482f6b",
+      "symbol": "install_mcp_config",
+      "title": "Generated API key written in plaintext to on-disk MCP JSON config file",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 789,
+          "quote": "langflow_api_key = api_key_response.api_key",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 790,
+          "quote": "args.extend([\"--headers\", \"x-api-key\", langflow_api_key])",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 860,
+          "quote": "json.dump(existing_config, f, indent=2)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/flows.py",
+      "line": 643,
+      "class": "CWE-113",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_d967835486453638",
+      "symbol": "download_multiple_file",
+      "title": "Content-Disposition filename is server-generated timestamp, not user input",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 643,
+          "quote": "        current_time = datetime.now(tz=timezone.utc).astimezone().strftime(\"%Y%m%d_%H%M%S\")",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 644,
+          "quote": "        filename = f\"{current_time}_langflow_flows.zip\"",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/flows.py",
+          "line": 649,
+          "quote": "            headers={\"Content-Disposition\": f\"attachment; filename={filename}\"},",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 194,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_e1c2adffc0d9aae0",
+      "symbol": "get_transactions",
+      "title": "get_transactions has no authenticated user or ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 194,
+          "quote": "async def get_transactions(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 195,
+          "quote": "flow_id: Annotated[UUID, Query()],",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 202,
+          "quote": ".where(TransactionTable.flow_id == flow_id)",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+      "line": 380,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "fingerprint": "fp_e202a13177c5ecca",
+      "symbol": "run_flow_for_openai_responses",
+      "title": "Internal exception message streamed verbatim to client in SSE response",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 380,
+          "quote": "except Exception as e:  # noqa: BLE001",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 382,
+          "quote": "error_response = create_openai_error(",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 383,
+          "quote": "message=str(e),",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/openai_responses.py",
+          "line": 386,
+          "quote": "yield f\"data: {error_response}\\n\\n\"",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp.py",
+      "line": 151,
+      "class": "CWE-209",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_ea35ef0a10d3d9b3",
+      "symbol": "handle_messages",
+      "title": "BrokenResourceError message in 404 response \u2014 low-sensitivity exception type",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp.py",
+          "line": 151,
+          "quote": "except (BrokenResourceError, BrokenPipeError) as e:",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp.py",
+          "line": 153,
+          "quote": "raise HTTPException(status_code=404, detail=f\"MCP Server disconnected, error: {e}\") from e",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 692,
+      "class": "CWE-346",
+      "severity": "high",
+      "verdict": "true-positive",
+      "fingerprint": "fp_f17aa03a8be8cd23",
+      "symbol": "install_mcp_config",
+      "title": "Local-IP guard in install_mcp_config bypassed via spoofed X-Forwarded-For",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 692,
+          "quote": "client_ip = get_client_ip(request)",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 693,
+          "quote": "if not is_local_ip(client_ip):",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 694,
+          "quote": "raise HTTPException(status_code=500, detail=\"MCP configuration can only be installed from a local connection\")",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/helpers/flow.py",
+      "line": 280,
+      "class": "CWE-94",
+      "severity": "critical",
+      "verdict": "true-positive",
+      "fingerprint": "fp_fbde3053ed1387d0",
+      "symbol": "generate_function_for_flow",
+      "title": "Code injection via exec() on user-controlled display_name",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 280,
+          "quote": "f\"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = \"",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 300,
+          "quote": "async def flow_function({func_args}):",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 327,
+          "quote": "exec(compiled_func, globals(), local_scope)  # noqa: S102",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/login.py",
+      "line": 110,
+      "class": "CWE-312",
+      "severity": "none",
+      "verdict": "false-positive",
+      "fingerprint": "fp_fc85a1263a1b5153",
+      "symbol": "auto_login",
+      "title": "store_api_key cookie in auto_login \u2014 intentional client-side delivery",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 110,
+          "quote": "\"apikey_tkn_lflw\",",
+          "resolved": true,
+          "reason": "resolved"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 111,
+          "quote": "str(user.store_api_key),  # Ensure it's a string",
+          "resolved": true,
+          "reason": "resolved"
+        }
+      ]
+    }
+  ]
+}

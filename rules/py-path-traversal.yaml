@@ -1,0 +1,25 @@
+id: codeguard-py-path-traversal
+description: |
+  Detect filesystem paths built from external input and used for open/read/write
+  or send_file without canonicalization + containment inside an allowed base
+  directory. Maps to CWE-22 (Path Traversal).
+languages: [python]
+severity: high
+weakness_class: CWE-22
+applies_to:
+  - open(), pathlib.Path(...).read_text/write_text, os.path.join used for file IO,
+    send_file / FileResponse where a path component is caller-supplied
+trigger_when:
+  - a path segment is, or derives from, external input (filename, id, query)
+  - and there is no realpath/resolve + containment check against a fixed base
+    (e.g. os.path.commonpath), so "../" or an absolute path can escape
+example_positive: |
+  def download(name):
+      return send_file(os.path.join(UPLOAD_DIR, name))
+example_negative: |
+  def download(name):
+      base = os.path.realpath(UPLOAD_DIR)
+      full = os.path.realpath(os.path.join(base, name))
+      if os.path.commonpath([base, full]) != base:
+          abort(403)
+      return send_file(full)

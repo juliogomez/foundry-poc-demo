@@ -1,0 +1,20 @@
+id: codeguard-py-sql-injection
+description: |
+  Detect SQL built by string interpolation/concatenation/format with external
+  input instead of parameterized queries / ORM bind parameters.
+  Maps to CWE-89 (SQL Injection).
+languages: [python]
+severity: high
+weakness_class: CWE-89
+applies_to:
+  - calls to cursor.execute / session.execute / text() / raw SQL where the query
+    string is built with f-strings, %, .format(), or + concatenation
+trigger_when:
+  - an interpolated value is, or derives from, external/caller-supplied input
+  - and it is not passed as a bound parameter
+example_positive: |
+  def get_user(cur, uid):
+      cur.execute(f"SELECT * FROM users WHERE id = {uid}")
+example_negative: |
+  def get_user(cur, uid):
+      cur.execute("SELECT * FROM users WHERE id = ?", (uid,))

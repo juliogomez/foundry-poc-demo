@@ -1,0 +1,272 @@
+{
+  "run_id": "base_e8a8362cc5b4",
+  "meta": {
+    "run_id": "base_e8a8362cc5b4",
+    "target": "langflow",
+    "pinned_ref": "1.7.3",
+    "model": "claude-sonnet-4-6",
+    "backend": "cursor",
+    "files_in_scope": 12,
+    "total_tokens": 1441761,
+    "duration_s": 249.1,
+    "parse_ok": true,
+    "raw_findings": 10
+  },
+  "usage": {
+    "input_tokens": 713640,
+    "output_tokens": 14491,
+    "total_tokens": 1441761
+  },
+  "findings": [
+    {
+      "file": "src/backend/base/langflow/helpers/flow.py",
+      "line": 327,
+      "class": "CWE-94",
+      "severity": "critical",
+      "verdict": "true-positive",
+      "title": "Code injection via exec() with user-controlled vertex display_name",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 280,
+          "quote": "            f\"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = \""
+        },
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 293,
+          "quote": "    arg_mappings = \", \".join("
+        },
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 295,
+          "quote": "        f'\"{original_name}\": {name}'"
+        },
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 327,
+          "quote": "    exec(compiled_func, globals(), local_scope)  # noqa: S102"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/endpoints.py",
+      "line": 878,
+      "class": "CWE-94",
+      "severity": "critical",
+      "verdict": "true-positive",
+      "title": "Arbitrary server-side code execution via custom component endpoints",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 878,
+          "quote": "    component = Component(_code=raw_code.code)"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 876,
+          "quote": "    user: CurrentActiveUser,"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 911,
+          "quote": "        component = Component(_code=code_request.code)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/api_key.py",
+      "line": 50,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "IDOR: API key deletion without ownership check",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 44,
+          "quote": "@router.delete(\"/{api_key_id}\", dependencies=[Depends(auth_utils.get_current_active_user)])"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 45,
+          "quote": "async def delete_api_key_route("
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 50,
+          "quote": "        await delete_api_key(db, api_key_id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 139,
+      "class": "CWE-306",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "Unauthenticated access to the image download endpoint",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 138,
+          "quote": "@router.get(\"/images/{flow_id}/{file_name}\")"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 139,
+          "quote": "async def download_image("
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 141,
+          "quote": "    flow_id: UUID,"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 107,
+          "quote": "async def download_file("
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 109,
+          "quote": "    flow: Annotated[Flow, Depends(get_flow)],"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 97,
+      "class": "CWE-22",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "Path traversal via unvalidated user-supplied filename in upload",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 97,
+          "quote": "        file_name = file.filename or hashlib.sha256(file_content).hexdigest()"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 98,
+          "quote": "        full_file_name = f\"{timestamp}_{file_name}\""
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 100,
+          "quote": "        await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 129,
+      "class": "CWE-113",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "title": "HTTP response header injection via unquoted filename in Content-Disposition",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 129,
+          "quote": "            \"Content-Disposition\": f\"attachment; filename={file_name} filename*=UTF-8''{file_name}\","
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/login.py",
+      "line": 91,
+      "class": "CWE-287",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "Authentication bypass when AUTO_LOGIN is enabled",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 88,
+          "quote": "@router.get(\"/auto_login\")"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 91,
+          "quote": "    if auth_settings.AUTO_LOGIN:"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/login.py",
+          "line": 92,
+          "quote": "        user_id, tokens = await create_user_longterm_token(db)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/validate.py",
+      "line": 16,
+      "class": "CWE-94",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "title": "Potential code execution inside validate_code on user-supplied source",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 3,
+          "quote": "from lfx.custom.validate import validate_code"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 16,
+          "quote": "        errors = validate_code(code.code)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/endpoints.py",
+      "line": 100,
+      "class": "CWE-209",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "Verbose internal exception detail leaked to API clients",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 100,
+          "quote": "        raise HTTPException(status_code=500, detail=str(exc)) from exc"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/chat.py",
+          "line": 130,
+          "quote": "        raise HTTPException(status_code=500, detail=str(exc)) from exc"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/validate.py",
+          "line": 23,
+          "quote": "        raise HTTPException(status_code=500, detail=str(e)) from e"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/store.py",
+      "line": 38,
+      "class": "CWE-312",
+      "severity": "low",
+      "verdict": "needs-review",
+      "title": "Fallback returns raw store API key when decryption fails",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/store.py",
+          "line": 37,
+          "quote": "    except Exception:  # noqa: BLE001"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/store.py",
+          "line": 38,
+          "quote": "        logger.exception(\"Failed to decrypt API key\")"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/store.py",
+          "line": 39,
+          "quote": "        return user.store_api_key"
+        }
+      ]
+    }
+  ]
+}

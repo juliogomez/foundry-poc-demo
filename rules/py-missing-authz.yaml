@@ -1,0 +1,26 @@
+id: codeguard-py-missing-authz
+description: |
+  Detect state-changing or sensitive HTTP endpoints that do not enforce an
+  authentication/authorization dependency, exposing them to unauthenticated
+  callers. Maps to CWE-862 (Missing Authorization) / CWE-306 (Missing
+  Authentication for Critical Function).
+languages: [python]
+severity: high
+weakness_class: CWE-862
+applies_to:
+  - FastAPI/Flask route handlers (@router.get/post/put/delete, @app.route)
+    that mutate state, run code, read files, or expose sensitive data
+trigger_when:
+  - the handler has no current-user / auth dependency (e.g. Depends(get_current_user),
+    Depends(api_key_security)) and no equivalent in-body auth check
+  - and the operation is sensitive (write, delete, code execution, file access,
+    secret retrieval)
+example_positive: |
+  @router.post("/validate/code")
+  async def validate_code(code: CodeValidationRequest):
+      return validate(code.code)   # no auth dependency; executes user code
+example_negative: |
+  @router.post("/validate/code")
+  async def validate_code(code: CodeValidationRequest,
+                          user: User = Depends(get_current_active_user)):
+      return validate(code.code)

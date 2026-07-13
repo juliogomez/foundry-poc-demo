@@ -1,0 +1,31 @@
+id: codeguard-py-sensitive-data-exposure
+description: |
+  Detect secrets/credentials returned to callers or written to logs in cleartext,
+  including fallback paths that return the raw secret when decryption/processing
+  fails. Maps to CWE-312 (Cleartext Storage/Exposure of Sensitive Information).
+
+  Provenance: added by the detection->prevention flywheel after the agentic
+  baseline surfaced a fallback that returns the raw store API key when decryption
+  fails (store.py) that the original corpus did not cover. See out/rule-gaps.jsonl.
+languages: [python]
+severity: medium
+weakness_class: CWE-312
+applies_to:
+  - returns/log statements whose value is a secret-bearing field (api_key, token,
+    password, secret, private_key), especially inside except/fallback branches
+trigger_when:
+  - a secret value is returned to the caller, logged, or otherwise exposed without
+    encryption/redaction
+  - fallback-on-error paths that surface the raw (undecrypted) secret are included
+example_positive: |
+  try:
+      return decrypt(user.store_api_key)
+  except Exception:
+      logger.exception("decrypt failed")
+      return user.store_api_key      # returns raw secret on failure
+example_negative: |
+  try:
+      return decrypt(user.store_api_key)
+  except Exception:
+      logger.exception("decrypt failed")
+      raise HTTPException(status_code=500, detail="key unavailable")

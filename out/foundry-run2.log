@@ -1,0 +1,16 @@
+{
+  "target": "langflow",
+  "pinned_ref": "1.7.3",
+  "model": "claude-sonnet-4-6",
+  "backend": "cursor",
+  "units_analyzed": 289,
+  "candidates": 61,
+  "total_tokens": 2053308,
+  "max_tokens": 6000000,
+  "stop_reason": "coverage-complete (all 289 units); trailing true-positive yield=0.67"
+}
+
+report:          /Users/jgomez2/dev/foundry-poc-demo/out-wide/findings/run_7b35d578cfd2.md
+normalized json: /Users/jgomez2/dev/foundry-poc-demo/out-wide/foundry-run_7b35d578cfd2.json
+raw candidates:  /Users/jgomez2/dev/foundry-poc-demo/out-wide/foundry-run_7b35d578cfd2-raw-candidates.jsonl
+tokens used:     2053308 / 6000000

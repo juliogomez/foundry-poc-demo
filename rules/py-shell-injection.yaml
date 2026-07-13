@@ -1,0 +1,22 @@
+id: codeguard-py-shell-injection
+description: |
+  Detect OS command execution (subprocess with shell=True, os.system, os.popen)
+  where the command string flows from external/caller-supplied input without a
+  shell-free argv form or allowlist. Maps to CWE-78 (OS Command Injection).
+languages: [python]
+severity: high
+weakness_class: CWE-78
+applies_to:
+  - functions calling subprocess.{run,call,Popen,check_output} with shell=True
+  - or os.system / os.popen
+trigger_when:
+  - the command argument is reachable from a request handler argument or other
+    external input
+  - and there is no structured argv list, documented allowlist, or other
+    shell-free command construction
+example_positive: |
+  def ping(host):
+      subprocess.run(f"ping -c1 {host}", shell=True)
+example_negative: |
+  def ping(host):
+      subprocess.run(["/bin/ping", "-c1", "--", host], shell=False)

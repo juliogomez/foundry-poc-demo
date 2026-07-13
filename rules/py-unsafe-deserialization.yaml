@@ -1,0 +1,21 @@
+id: codeguard-py-unsafe-deserialization
+description: |
+  Detect unsafe native deserialization of untrusted data via pickle, yaml.load
+  (without SafeLoader), or similar, which can execute arbitrary code on load.
+  Maps to CWE-502 (Deserialization of Untrusted Data).
+languages: [python]
+severity: high
+weakness_class: CWE-502
+applies_to:
+  - pickle.load / pickle.loads / cPickle
+  - yaml.load without Loader=SafeLoader (or yaml.unsafe_load)
+  - jsonpickle.decode, dill.loads, marshal.loads on external data
+trigger_when:
+  - the serialized bytes/string are, or derive from, external input
+    (request body, uploaded file, cache, cross-service message)
+example_positive: |
+  def load_state(blob):
+      return pickle.loads(blob)   # blob is attacker-controlled
+example_negative: |
+  def load_state(blob):
+      return json.loads(blob)     # data-only format

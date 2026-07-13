@@ -1,0 +1,26 @@
+id: codeguard-py-header-injection
+description: |
+  Detect caller-controlled values interpolated into HTTP response headers without
+  sanitization, enabling response header injection / splitting or malformed
+  Content-Disposition. Maps to CWE-113 (Improper Neutralization of CRLF in HTTP
+  Headers).
+
+  Provenance: added by the detection->prevention flywheel after the agentic
+  baseline surfaced an unquoted filename in a Content-Disposition header
+  (files.py) that the original corpus did not cover. See out/rule-gaps.jsonl.
+languages: [python]
+severity: medium
+weakness_class: CWE-113
+applies_to:
+  - assignments/returns that build a response header value (Content-Disposition,
+    Location, Set-Cookie, custom X-* headers) via f-string/%/format/concat
+trigger_when:
+  - an interpolated value is, or derives from, external input (filename, id,
+    redirect target) and is not stripped of CR/LF and header-breaking characters
+    or properly quoted/encoded for the header context
+example_positive: |
+  headers = {"Content-Disposition": f"attachment; filename={file_name}"}
+example_negative: |
+  from urllib.parse import quote
+  safe = quote(file_name.replace("\r", "").replace("\n", ""))
+  headers = {"Content-Disposition": f"attachment; filename*=UTF-8''{safe}"}

@@ -1,0 +1,33 @@
+id: codeguard-py-idor-missing-ownership
+description: |
+  Detect handlers that read, update, or delete a resource identified by a
+  caller-supplied id WITHOUT verifying the current user owns (or is authorized
+  for) that resource. Authentication alone is not authorization. Maps to
+  CWE-639 (Authorization Bypass Through User-Controlled Key / IDOR).
+
+  Provenance: added by the detection->prevention flywheel after the agentic
+  baseline surfaced an IDOR on API-key deletion (api_key.py) that the original
+  corpus did not cover. See out/rule-gaps.jsonl.
+languages: [python]
+severity: high
+weakness_class: CWE-639
+applies_to:
+  - route handlers that fetch/mutate/delete an object by an id taken from the
+    path, query, or body (e.g. delete_x(db, x_id), get_x(db, x_id))
+trigger_when:
+  - the handler resolves the object solely by the caller-supplied id and calls a
+    data-layer function with it, with NO check that the object belongs to the
+    authenticated user (no user_id filter, no ownership assertion)
+  - being authenticated (Depends(get_current_active_user)) does NOT satisfy this;
+    the object must be scoped to that user
+example_positive: |
+  @router.delete("/{api_key_id}", dependencies=[Depends(get_current_active_user)])
+  async def delete_api_key_route(api_key_id: UUID, db: Session):
+      await delete_api_key(db, api_key_id)   # no check that key belongs to caller
+example_negative: |
+  @router.delete("/{api_key_id}")
+  async def delete_api_key_route(api_key_id: UUID, user: CurrentActiveUser, db: Session):
+      key = await get_api_key(db, api_key_id)
+      if key.user_id != user.id:
+          raise HTTPException(403)
+      await delete_api_key(db, api_key_id)

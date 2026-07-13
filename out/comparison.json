@@ -1,0 +1,64 @@
+{
+  "foundry": {
+    "n_findings": 58,
+    "n_confirmed": 28,
+    "structural_completeness": 1.0,
+    "confirmed_citation_resolution": 1.0,
+    "confirmed_hallucinated_citations": 0,
+    "hallucinated_citations_total": 0,
+    "duplicate_rate": 0.017,
+    "provenance_reconstructable": true,
+    "bounded_stop": "coverage-complete (all 289 units); trailing true-positive yield=0.67",
+    "raw_before_dedup": 61
+  },
+  "baseline": {
+    "n_findings": 15,
+    "n_confirmed": 14,
+    "structural_completeness": 1.0,
+    "confirmed_citation_resolution": 1.0,
+    "confirmed_hallucinated_citations": 0,
+    "hallucinated_citations_total": 0,
+    "duplicate_rate": 0.0,
+    "provenance_reconstructable": false,
+    "bounded_stop": "none (single unbounded agent turn)",
+    "raw_before_dedup": 15
+  },
+  "cross_run_stability": {
+    "runs": 2,
+    "distinct_fingerprints": 67,
+    "seen_in_multiple_runs": 56,
+    "per_run": [
+      [
+        "run_0285f1964168",
+        64
+      ],
+      [
+        "run_7b35d578cfd2",
+        58
+      ]
+    ],
+    "naive_sum_if_no_dedup": 122
+  },
+  "flywheel": {
+    "baseline_classes": [
+      "CWE-113",
+      "CWE-22",
+      "CWE-285",
+      "CWE-348",
+      "CWE-639",
+      "CWE-862",
+      "CWE-94"
+    ],
+    "rules_at_run": 13,
+    "rules_now": 13,
+    "gap_at_run": [
+      "CWE-348"
+    ],
+    "closed_by_new_rules": [],
+    "still_open": [
+      "CWE-348"
+    ],
+    "new_rules": [],
+    "exploratory_rule_gaps": 4
+  }
+}

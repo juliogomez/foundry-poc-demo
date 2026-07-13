@@ -1,0 +1,24 @@
+id: codeguard-py-code-injection-exec
+description: |
+  Detect dynamic code execution via eval(), exec(), or compile()+exec() where
+  the code/string argument may originate from external or caller-supplied input.
+  Maps to CWE-94 (Code Injection) / CWE-95 (Eval Injection).
+languages: [python]
+severity: critical
+weakness_class: CWE-94
+applies_to:
+  - functions calling the builtins eval(), exec(), or compile(..., "exec")
+  - includes indirect execution of a compiled code object
+trigger_when:
+  - the code/string argument is, or is derived from, a function parameter,
+    request field, database value, or file content
+  - and there is no allowlist, sandbox, or restricted globals/locals that would
+    prevent arbitrary Python from running
+example_positive: |
+  def run_snippet(body):
+      compiled = compile(body, "<string>", "exec")
+      exec(compiled, globals(), {})
+example_negative: |
+  import ast
+  def parse_literal(body):
+      return ast.literal_eval(body)   # data only, no code execution

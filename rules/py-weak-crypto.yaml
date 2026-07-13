@@ -1,0 +1,21 @@
+id: codeguard-py-weak-crypto
+description: |
+  Detect use of broken/deprecated cryptographic primitives: MD5/SHA-1 for
+  security purposes, DES/3DES/RC4, or ECB mode. Maps to CWE-327 (Use of a
+  Broken or Risky Cryptographic Algorithm).
+languages: [python]
+severity: medium
+weakness_class: CWE-327
+applies_to:
+  - hashlib.md5 / hashlib.sha1 used for passwords, tokens, signatures, or
+    integrity (not for non-security checksums)
+  - Crypto/cryptography usage of DES, 3DES, RC4, or AES in ECB mode
+trigger_when:
+  - the primitive is used in a security-relevant context (auth, signing,
+    password storage, integrity of untrusted data)
+example_positive: |
+  def hash_password(pw):
+      return hashlib.md5(pw.encode()).hexdigest()
+example_negative: |
+  def hash_password(pw):
+      return argon2.PasswordHasher().hash(pw)

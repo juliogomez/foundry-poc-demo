@@ -1,0 +1,1087 @@
+# Foundry PoC - security findings report
+
+- **Run:** `run_7b35d578cfd2`
+- **Target:** `langflow` @ `1.7.3`
+- **Model:** `claude-sonnet-4-6`  |  **Backend:** `cursor`
+- **Units analyzed:** 289  |  **Candidates:** 61  |  **Tokens:** 2053308/6000000
+- **Stop reason:** coverage-complete (all 289 units); trailing true-positive yield=0.67
+
+## Summary
+
+| Verdict | Count |
+|---|---|
+| true-positive | 28 |
+| needs-review | 4 |
+| false-positive | 26 |
+
+The findings are ordered by verdict and then severity. Every `true-positive` passed the evidence gate (all its citations resolve to real lines). The `needs-review` items depend of data flow outside the unit, or they had one or more citations that did not resolve.
+
+## 1. Path traversal + arbitrary directory deletion in delete_knowledge_base  
+**Verdict:** `true-positive`  |  **Severity:** `critical`  |  **Class:** CWE-22  |  **Rule:** `codeguard-py-path-traversal`
+
+- **Location:** `src/backend/base/langflow/api/v1/knowledge_bases.py` - `delete_knowledge_base` (line 394)
+- **Fingerprint:** `fp_4b8f78034b4f3cd6`
+
+`kb_name` is taken from the URL path (line 389) and joined onto `kb_root_path / kb_user` at line 394 with no `resolve()` or containment check. The resulting `kb_path` is passed directly to `shutil.rmtree` at line 400, meaning a traversal value such as `../../other_user` or `../../important` would delete arbitrary directories on the server.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:394` - resolved
+  > `kb_path = kb_root_path / kb_user / kb_name`
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:400` - resolved
+  > `shutil.rmtree(kb_path)`
+
+---
+
+## 2. Path traversal + bulk arbitrary directory deletion in delete_knowledge_bases_bulk  
+**Verdict:** `true-positive`  |  **Severity:** `critical`  |  **Class:** CWE-22  |  **Rule:** `codeguard-py-path-traversal`
+
+- **Location:** `src/backend/base/langflow/api/v1/knowledge_bases.py` - `delete_knowledge_bases_bulk` (line 421)
+- **Fingerprint:** `fp_868a27aebfd3098f`
+
+Each `kb_name` in `request.kb_names` (a user-controlled request body, line 421) is joined onto `kb_user_path` at line 422 without `resolve()` or a containment check, and then passed to `shutil.rmtree` at line 430. This allows a bulk-delete request containing traversal entries like `../../victim` to delete arbitrary directories, with the loop continuing through additional names even after failures.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:421` - resolved
+  > `for kb_name in request.kb_names:`
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:422` - resolved
+  > `kb_path = kb_user_path / kb_name`
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:430` - resolved
+  > `shutil.rmtree(kb_path)`
+
+---
+
+## 3. Code injection via exec() on user-controlled display_name  
+**Verdict:** `true-positive`  |  **Severity:** `critical`  |  **Class:** CWE-94  |  **Rule:** `codeguard-py-code-injection-exec`
+
+- **Location:** `src/backend/base/langflow/helpers/flow.py` - `generate_function_for_flow` (line 280)
+- **Fingerprint:** `fp_fbde3053ed1387d0`
+
+Line 280 interpolates `input_.display_name` (a user-controlled vertex property) directly into the function argument string, which is embedded verbatim into `func_body` at line 300 (`{func_args}`) and then executed via `exec(compiled_func, globals(), local_scope)` at line 327. Because `globals()` is passed as the global namespace, any Python code injected through a crafted `display_name` executes with full access to the process environment. There is no allowlist, sandboxing, or restricted globals in evidence.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/helpers/flow.py:280` - resolved
+  > `f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "`
+- `src/backend/base/langflow/helpers/flow.py:300` - resolved
+  > `async def flow_function({func_args}):`
+- `src/backend/base/langflow/helpers/flow.py:327` - resolved
+  > `exec(compiled_func, globals(), local_scope)  # noqa: S102`
+
+---
+
+## 4. IDOR: API key deleted without ownership verification  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/api_key.py` - `delete_api_key_route` (line 45)
+- **Fingerprint:** `fp_7f6edfae3c9817dc`
+
+The handler accepts a caller-supplied `api_key_id` and passes it directly to `delete_api_key` with only the database session. The function signature exposes no `current_user` parameter and performs no user-scoped ownership check before deletion, allowing any caller to delete any user's API key by guessing or enumerating UUIDs.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/api_key.py:45` - resolved
+  > `async def delete_api_key_route(`
+- `src/backend/base/langflow/api/v1/api_key.py:46` - resolved
+  > `api_key_id: UUID,`
+- `src/backend/base/langflow/api/v1/api_key.py:47` - resolved
+  > `db: DbSession,`
+- `src/backend/base/langflow/api/v1/api_key.py:50` - resolved
+  > `await delete_api_key(db, api_key_id)`
+
+---
+
+## 5. Missing authentication on file upload endpoint  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/endpoints.py` - `create_upload_file` (line 846)
+- **Fingerprint:** `fp_aa1fe95787335300`
+
+The handler signature has only `file: UploadFile` and `flow_id: UUID` with no current_user or auth dependency. Any unauthenticated caller can upload arbitrary files into any flow's storage folder by supplying a known or guessed `flow_id`, enabling both unauthorized data injection and potential storage abuse.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/endpoints.py:846` - resolved
+  > `async def create_upload_file(`
+- `src/backend/base/langflow/api/v1/endpoints.py:847` - resolved
+  > `file: UploadFile,`
+- `src/backend/base/langflow/api/v1/endpoints.py:848` - resolved
+  > `flow_id: UUID,`
+- `src/backend/base/langflow/api/v1/endpoints.py:856` - resolved
+  > `file_path = await asyncio.to_thread(save_uploaded_file, file, folder_name=flow_id_str)`
+
+---
+
+## 6. Missing authentication on image download endpoint  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/files.py` - `download_image` (line 139)
+- **Fingerprint:** `fp_c51d302382216e50`
+
+The handler signature declares only `file_name: ValidatedFileName`, `flow_id: UUID`, and the storage service dependency—no current_user or auth dependency. Any unauthenticated caller can retrieve stored files from any flow by supplying a `flow_id` and `file_name`, exposing potentially sensitive user-uploaded content.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/files.py:139` - resolved
+  > `async def download_image(`
+- `src/backend/base/langflow/api/v1/files.py:140` - resolved
+  > `file_name: ValidatedFileName,`
+- `src/backend/base/langflow/api/v1/files.py:141` - resolved
+  > `flow_id: UUID,`
+- `src/backend/base/langflow/api/v1/files.py:161` - resolved
+  > `file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)`
+
+---
+
+## 7. Path traversal in get_knowledge_base via unvalidated kb_name  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-22  |  **Rule:** `codeguard-py-path-traversal`
+
+- **Location:** `src/backend/base/langflow/api/v1/knowledge_bases.py` - `get_knowledge_base` (line 354)
+- **Fingerprint:** `fp_caaa8779720563a5`
+
+`kb_name` is taken directly from the URL path (line 354) and joined onto `kb_root_path / kb_user` at line 359 with no `resolve()` call and no containment check against the base directory. A value such as `../../etc/passwd` would cause `kb_path` to resolve outside the user's knowledge-base directory, allowing an attacker to test for the existence of arbitrary filesystem paths via the 404/200 oracle at line 361.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:354` - resolved
+  > `async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:`
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:359` - resolved
+  > `kb_path = kb_root_path / kb_user / kb_name`
+- `src/backend/base/langflow/api/v1/knowledge_bases.py:361` - resolved
+  > `if not kb_path.exists() or not kb_path.is_dir():`
+
+---
+
+## 8. X-Forwarded-For header trusted without proxy validation — IP spoofing  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-346  |  **Rule:** `EXPLORATORY`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `get_client_ip` (line 670)
+- **Fingerprint:** `fp_b70bbc27590946e1`
+
+Lines 670–673 blindly trust the attacker-controlled `X-Forwarded-For` header without verifying that the request arrived through a trusted reverse proxy. An attacker who sends `X-Forwarded-For: 127.0.0.1` from any remote host will have `get_client_ip` return `'127.0.0.1'`, which `is_local_ip` will accept as a local address. This directly undermines any local-only security gate that calls this function.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:670` - resolved
+  > `forwarded_for = request.headers.get("X-Forwarded-For")`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:671` - resolved
+  > `if forwarded_for:`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:673` - resolved
+  > `return forwarded_for.split(",")[0].strip()`
+
+---
+
+## 9. Local-IP guard in install_mcp_config bypassed via spoofed X-Forwarded-For  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-346  |  **Rule:** `EXPLORATORY`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `install_mcp_config` (line 692)
+- **Fingerprint:** `fp_f17aa03a8be8cd23`
+
+The security gate at lines 692–694 calls `get_client_ip(request)` and passes the result to `is_local_ip`. Because `get_client_ip` returns the first value from the unauthenticated `X-Forwarded-For` header (candidate 16), a remote attacker sets that header to `127.0.0.1` to satisfy the local check and invoke `install_mcp_config` — which reads and writes local filesystem MCP config files and generates API keys — from any network location.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:692` - resolved
+  > `client_ip = get_client_ip(request)`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:693` - resolved
+  > `if not is_local_ip(client_ip):`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:694` - resolved
+  > `raise HTTPException(status_code=500, detail="MCP configuration can only be installed from a local connection")`
+
+---
+
+## 10. delete_messages has no authenticated user or ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/monitor.py` - `delete_messages` (line 105)
+- **Fingerprint:** `fp_5fc6e8be5a84da52`
+
+Unlike `get_messages` which has `current_user: Annotated[User, Depends(get_current_active_user)]`, the `delete_messages` function signature includes only `message_ids` and `session`. There is no authenticated user parameter and no filter tying the deleted rows to any user's ownership, allowing bulk deletion of any message by ID.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/monitor.py:105` - resolved
+  > `async def delete_messages(message_ids: list[UUID], session: DbSession) -> None:`
+- `src/backend/base/langflow/api/v1/monitor.py:107` - resolved
+  > `await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]`
+
+---
+
+## 11. update_message has no authenticated user or ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/monitor.py` - `update_message` (line 113)
+- **Fingerprint:** `fp_a7d26ff6ce1b861e`
+
+The `update_message` function accepts only `message_id`, `message`, and `session`—there is no `current_user` dependency. Any caller that can reach this handler can retrieve and mutate any `MessageTable` row by its UUID without any ownership assertion.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/monitor.py:113` - resolved
+  > `async def update_message(`
+- `src/backend/base/langflow/api/v1/monitor.py:119` - resolved
+  > `db_message = await session.get(MessageTable, message_id)`
+- `src/backend/base/langflow/api/v1/monitor.py:130` - resolved
+  > `db_message.sqlmodel_update(message_dict)`
+
+---
+
+## 12. update_session_id has no authenticated user or ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/monitor.py` - `update_session_id` (line 143)
+- **Fingerprint:** `fp_a8a5e0bfe97fd34b`
+
+The `update_session_id` function signature contains only `old_session_id`, `new_session_id`, and `session`—no `current_user` dependency. All messages matching the caller-supplied `old_session_id` are fetched and bulk-updated to `new_session_id` without verifying that those messages belong to the caller.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/monitor.py:143` - resolved
+  > `async def update_session_id(`
+- `src/backend/base/langflow/api/v1/monitor.py:150` - resolved
+  > `stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)`
+- `src/backend/base/langflow/api/v1/monitor.py:161` - resolved
+  > `message.session_id = new_session_id`
+
+---
+
+## 13. delete_messages_session has no authenticated user or ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/monitor.py` - `delete_messages_session` (line 177)
+- **Fingerprint:** `fp_48c52c96c687b21a`
+
+The `delete_messages_session` function takes only `session_id` and `session`; there is no `current_user` parameter or ownership filter. Any caller can delete all messages for any `session_id` value without authentication or authorization.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/monitor.py:177` - resolved
+  > `async def delete_messages_session(`
+- `src/backend/base/langflow/api/v1/monitor.py:184` - resolved
+  > `.where(col(MessageTable.session_id) == session_id)`
+
+---
+
+## 14. IDOR: flow executed without ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `high`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/voice_mode.py` - `flow_tts_websocket` (line 1146)
+- **Fingerprint:** `fp_62e5209b0b654b8a`
+
+The handler accepts `flow_id` from the path at line 1146. Authentication runs at line 1200, but `build_flow_and_stream` is invoked at line 1254 with `flow_id=UUID(flow_id)` using the raw caller-supplied value and no ownership assertion. This allows any authenticated user to trigger full execution of another user's flow, including reading its outputs.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/voice_mode.py:1146` - resolved
+  > `flow_id: str,`
+- `src/backend/base/langflow/api/v1/voice_mode.py:1200` - resolved
+  > `current_user: User = await get_current_user_for_websocket(client_websocket, session)`
+- `src/backend/base/langflow/api/v1/voice_mode.py:1254` - resolved
+  > `response = await build_flow_and_stream(`
+- `src/backend/base/langflow/api/v1/voice_mode.py:1255` - resolved
+  > `flow_id=UUID(flow_id),`
+
+---
+
+## 15. Missing authentication on retrieve_vertices_order  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/chat.py` - `retrieve_vertices_order` (line 59)
+- **Fingerprint:** `fp_9f1d0aefe2bfa68e`
+
+The handler function signature contains no `current_user` or any auth dependency (`Depends(get_current_active_user)`, `Depends(api_key_security)`, etc.). It performs sensitive operations—loading a flow from the database and caching the resulting execution graph—without enforcing that the caller is authenticated or owns the requested flow.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/chat.py:59` - resolved
+  > `async def retrieve_vertices_order(`
+- `src/backend/base/langflow/api/v1/chat.py:61` - resolved
+  > `flow_id: uuid.UUID,`
+- `src/backend/base/langflow/api/v1/chat.py:66` - resolved
+  > `session: DbSession,`
+- `src/backend/base/langflow/api/v1/chat.py:92` - resolved
+  > `graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)`
+
+---
+
+## 16. IDOR: build events retrievable for any job_id without ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/chat.py` - `get_build_events` (line 202)
+- **Fingerprint:** `fp_63a72ec086c700d9`
+
+The handler accepts a caller-supplied `job_id: str` and passes it directly to `get_flow_events_response` with no current_user parameter and no ownership assertion. The docstring acknowledges authentication is required but the function signature has no auth dependency, so any caller who knows a job_id can poll another user's build events.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/chat.py:202` - resolved
+  > `async def get_build_events(`
+- `src/backend/base/langflow/api/v1/chat.py:203` - resolved
+  > `job_id: str,`
+- `src/backend/base/langflow/api/v1/chat.py:212` - resolved
+  > `return await get_flow_events_response(`
+
+---
+
+## 17. IDOR: build job cancellable by any caller without ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/chat.py` - `cancel_build` (line 224)
+- **Fingerprint:** `fp_bc41db85dee8617b`
+
+The handler accepts caller-supplied `job_id: str` and calls `cancel_flow_build(job_id=job_id, queue_service=queue_service)` directly. No current_user parameter exists and no ownership assertion is made, allowing any caller who knows a job_id to cancel another user's running build.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/chat.py:224` - resolved
+  > `async def cancel_build(`
+- `src/backend/base/langflow/api/v1/chat.py:225` - resolved
+  > `job_id: str,`
+- `src/backend/base/langflow/api/v1/chat.py:234` - resolved
+  > `cancellation_success = await cancel_flow_build(job_id=job_id, queue_service=queue_service)`
+
+---
+
+## 18. Full stack trace returned to client in vertex build error response  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/chat.py` - `build_vertex` (line 340)
+- **Fingerprint:** `fp_8a27c0f1da990323`
+
+On a non-`ComponentBuildError` exception, `traceback.format_exc()` is captured into `tb` and then placed directly into the `stackTrace` field of the response `message` dict, which is included in the `ResultDataResponse` returned to the caller. This exposes full internal stack traces including file paths, class names, and internal state.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/chat.py:340` - resolved
+  > `tb = traceback.format_exc()`
+- `src/backend/base/langflow/api/v1/chat.py:343` - resolved
+  > `message = {"errorMessage": params, "stackTrace": tb}`
+- `src/backend/base/langflow/api/v1/chat.py:347` - resolved
+  > `outputs = {output_label: OutputValue(message=message, type="error")}`
+
+---
+
+## 19. CRLF/header injection via unencoded 'search' query parameter in redirect URL  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-113  |  **Rule:** `codeguard-py-header-injection`
+
+- **Location:** `src/backend/base/langflow/api/v1/folders.py` - `read_folder_redirect` (line 41)
+- **Fingerprint:** `fp_6edb551ef5493d92`
+
+The `search` string parameter (line 41, declared as bare `str`) is interpolated directly into `params_list` at line 51 without stripping CR/LF or percent-encoding. This string is then concatenated into `redirect_url` (line 58) which becomes the `Location` header value of the 307 RedirectResponse. An attacker can inject `\r\n` sequences to split the HTTP response and inject arbitrary headers.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/folders.py:41` - resolved
+  > `search: str = "",`
+- `src/backend/base/langflow/api/v1/folders.py:51` - resolved
+  > `params_list.append(f"search={search}")`
+- `src/backend/base/langflow/api/v1/folders.py:58` - resolved
+  > `redirect_url += "?" + "&".join(params_list)`
+- `src/backend/base/langflow/api/v1/folders.py:60` - resolved
+  > `return RedirectResponse(url=redirect_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)`
+
+---
+
+## 20. Internal exception detail returned verbatim to MCP client (nested function duplicate)  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_utils.py` - `handle_call_tool.execute_tool` (line 295)
+- **Fingerprint:** `fp_121ebaa17e0cab24`
+
+This is the same code path as candidate 2 within the nested `execute_tool` closure. Exceptions from flow execution are stringified and forwarded to the MCP client via `TextContent`, bypassing the excluded HTTPException pattern. The `e!s` f-string renders the full exception message, which for DB/ORM errors commonly includes query text, table names, or connection details.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_utils.py:295` - resolved
+  > `except Exception as e:  # noqa: BLE001`
+- `src/backend/base/langflow/api/v1/mcp_utils.py:296` - resolved
+  > `error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"`
+- `src/backend/base/langflow/api/v1/mcp_utils.py:297` - resolved
+  > `collected_results.append(types.TextContent(type="text", text=error_msg))`
+
+---
+
+## 21. Internal exception detail returned verbatim to MCP client in TextContent  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_utils.py` - `handle_call_tool` (line 295)
+- **Fingerprint:** `fp_7a6bea2498c029e0`
+
+Exceptions thrown during flow execution—which may originate from ORM, filesystem, or network layers—are caught and appended directly to the `collected_results` list as a `TextContent` object returned to the MCP caller. This is not the excluded generic `HTTPException(status_code=5xx, detail=str(e))` pattern; it is a domain-level response channel that exposes raw `str(e)` to external clients, potentially leaking SQL queries, absolute paths, or connection strings.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_utils.py:295` - resolved
+  > `except Exception as e:  # noqa: BLE001`
+- `src/backend/base/langflow/api/v1/mcp_utils.py:296` - resolved
+  > `error_msg = f"Error Executing the {flow.name} tool. Error: {e!s}"`
+- `src/backend/base/langflow/api/v1/mcp_utils.py:297` - resolved
+  > `collected_results.append(types.TextContent(type="text", text=error_msg))`
+
+---
+
+## 22. Unvalidated caller-supplied order_by string used in dynamic ORM attribute lookup  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-89  |  **Rule:** `codeguard-py-sql-injection`
+
+- **Location:** `src/backend/base/langflow/api/v1/monitor.py` - `get_messages` (line 75)
+- **Fingerprint:** `fp_87630828eb4edee0`
+
+The `order_by` query parameter is taken directly from the HTTP request (line 75) and used without any allow-list in `getattr(MessageTable, order_by)` (line 96). An attacker can supply an arbitrary attribute name: if invalid, an AttributeError is raised and its message (containing the attribute name and model class details) leaks via the generic 500 handler; if valid but non-column, it may cause unexpected SQL or ORM errors. Legitimate columns outside the intended set can also be used to alter query ordering in unintended ways.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/monitor.py:75` - resolved
+  > `order_by: Annotated[str | None, Query()] = "timestamp",`
+- `src/backend/base/langflow/api/v1/monitor.py:96` - resolved
+  > `order_col = getattr(MessageTable, order_by).asc()`
+- `src/backend/base/langflow/api/v1/monitor.py:97` - resolved
+  > `stmt = stmt.order_by(order_col)`
+
+---
+
+## 23. get_transactions has no authenticated user or ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/monitor.py` - `get_transactions` (line 194)
+- **Fingerprint:** `fp_e1c2adffc0d9aae0`
+
+The `get_transactions` handler accepts a caller-supplied `flow_id` query parameter and queries `TransactionTable` filtered only by that `flow_id`, with no `current_user` dependency and no join against the user's owned flows. Any authenticated (or unauthenticated, if the route lacks middleware-level auth) caller can read another user's transaction history.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/monitor.py:194` - resolved
+  > `async def get_transactions(`
+- `src/backend/base/langflow/api/v1/monitor.py:195` - resolved
+  > `flow_id: Annotated[UUID, Query()],`
+- `src/backend/base/langflow/api/v1/monitor.py:202` - resolved
+  > `.where(TransactionTable.flow_id == flow_id)`
+
+---
+
+## 24. Internal exception message streamed verbatim to client in SSE response  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/openai_responses.py` - `run_flow_for_openai_responses` (line 380)
+- **Fingerprint:** `fp_e202a13177c5ecca`
+
+In the streaming error handler, `str(e)` from an arbitrary exception raised during flow execution is passed to `create_openai_error(message=str(e), ...)` and yielded into the SSE stream delivered to the client. This is not the excluded generic `HTTPException(status_code=5xx, detail=str(e))` pattern—it is a streaming domain response. Exceptions from DB/ORM, filesystem, or network layers can embed SQL, paths, or connection strings in their messages.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/openai_responses.py:380` - resolved
+  > `except Exception as e:  # noqa: BLE001`
+- `src/backend/base/langflow/api/v1/openai_responses.py:382` - resolved
+  > `error_response = create_openai_error(`
+- `src/backend/base/langflow/api/v1/openai_responses.py:383` - resolved
+  > `message=str(e),`
+- `src/backend/base/langflow/api/v1/openai_responses.py:386` - resolved
+  > `yield f"data: {error_response}\n\n"`
+
+---
+
+## 25. Internal exception detail returned verbatim in OpenAI error response body  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/openai_responses.py` - `create_response` (line 596)
+- **Fingerprint:** `fp_4a135cdbe6041f77`
+
+The top-level exception handler in `create_response` passes `str(exc)` from any exception into `create_openai_error(message=str(exc), ...)` which is returned as an `OpenAIErrorResponse` to the client. This is not the excluded `HTTPException(status_code=5xx, detail=str(e))` pattern—it returns a structured JSON body. Exceptions from DB, ORM, or network layers within the call chain can carry SQL, paths, or host details.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/openai_responses.py:596` - resolved
+  > `except Exception as exc:  # noqa: BLE001`
+- `src/backend/base/langflow/api/v1/openai_responses.py:612` - resolved
+  > `error_response = create_openai_error(`
+- `src/backend/base/langflow/api/v1/openai_responses.py:613` - resolved
+  > `message=str(exc),`
+- `src/backend/base/langflow/api/v1/openai_responses.py:616` - resolved
+  > `return OpenAIErrorResponse(error=error_response["error"])`
+
+---
+
+## 26. Raw undecrypted store API key returned to caller on decryption failure  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-312  |  **Rule:** `codeguard-py-sensitive-data-exposure`
+
+- **Location:** `src/backend/base/langflow/api/v1/store.py` - `get_optional_user_store_api_key` (line 36)
+- **Fingerprint:** `fp_5e63d5868c3fed69`
+
+If `decrypt_api_key` raises any exception, the fallback path at line 39 returns `user.store_api_key` directly to the caller instead of `None` or a safe sentinel. If the stored value is a plaintext API key (e.g., from before encryption was introduced), or if decryption fails due to key rotation while the underlying value is still readable, the raw secret is exposed to whoever called this helper.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/store.py:36` - resolved
+  > `return auth_utils.decrypt_api_key(user.store_api_key, get_settings_service())`
+- `src/backend/base/langflow/api/v1/store.py:37` - resolved
+  > `except Exception:  # noqa: BLE001`
+- `src/backend/base/langflow/api/v1/store.py:39` - resolved
+  > `return user.store_api_key`
+
+---
+
+## 27. IDOR: flow description retrieved without ownership check  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/voice_mode.py` - `flow_as_tool_websocket` (line 718)
+- **Fingerprint:** `fp_76cff8c1b3b5cfbe`
+
+The handler accepts `flow_id` from the WebSocket path at line 718. Authentication occurs at lines 731–732, but `get_flow_desc_from_db(flow_id)` at line 736 is called with the raw caller-supplied identifier and no predicate that verifies the authenticated `current_user` owns that flow. Any authenticated user can therefore probe the description of any flow by supplying an arbitrary `flow_id`.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/voice_mode.py:718` - resolved
+  > `flow_id: str,`
+- `src/backend/base/langflow/api/v1/voice_mode.py:731` - resolved
+  > `current_user: User = await get_current_user_for_websocket(client_websocket, session)`
+- `src/backend/base/langflow/api/v1/voice_mode.py:736` - resolved
+  > `flow_description = await get_flow_desc_from_db(flow_id)`
+
+---
+
+## 28. Network exception message (URL/host) leaked to caller via error response  
+**Verdict:** `true-positive`  |  **Severity:** `medium`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/voice_mode.py` - `get_elevenlabs_voice_ids` (line 1368)
+- **Fingerprint:** `fp_a4be9839eb5d674f`
+
+Line 1370 returns `{"error": str(e)}` where `e` is a `requests.RequestException`. The `requests` library routinely embeds the full request URL (including scheme, hostname, port, and path) in `RequestException` messages. This is a specific, non-broad exception type so the broad-except exclusion does not apply, and the exception originates in a network client call to the ElevenLabs API.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/voice_mode.py:1368` - resolved
+  > `except requests.RequestException as e:`
+- `src/backend/base/langflow/api/v1/voice_mode.py:1370` - resolved
+  > `return {"error": str(e)}`
+
+---
+
+## 29. Webhook endpoint may allow unauthenticated flow execution  
+**Verdict:** `needs-review`  |  **Severity:** `medium`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/endpoints.py` - `webhook_run_flow` (line 612)
+- **Fingerprint:** `fp_5e1278a4cf63b5d9`
+
+The handler has no explicit auth dependency in its signature; authentication is entirely delegated to `get_webhook_user`. If that function permits anonymous execution when the application's auth is disabled or when no API key is provided, any external caller can trigger arbitrary flow execution. The actual security posture depends on `get_webhook_user`'s implementation, which is not shown.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/endpoints.py:612` - resolved
+  > `async def webhook_run_flow(`
+- `src/backend/base/langflow/api/v1/endpoints.py:638` - resolved
+  > `webhook_user = await get_webhook_user(flow_id_or_name, request)`
+- `src/backend/base/langflow/api/v1/endpoints.py:667` - resolved
+  > `background_tasks.add_task(`
+
+---
+
+## 30. Potential header injection via unquoted filename in Content-Disposition  
+**Verdict:** `needs-review`  |  **Severity:** `medium`  |  **Class:** CWE-113  |  **Rule:** `codeguard-py-header-injection`
+
+- **Location:** `src/backend/base/langflow/api/v1/files.py` - `download_file` (line 108)
+- **Fingerprint:** `fp_44d49ed412ca4dad`
+
+The `file_name` value is interpolated directly into the `Content-Disposition` header without quoting the filename token or stripping CR/LF characters. Whether this is exploitable depends entirely on what `ValidatedFileName` permits—if it allows newlines or other HTTP header-breaking characters, an attacker can inject arbitrary response headers. That type's definition is not shown.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/files.py:108` - resolved
+  > `file_name: ValidatedFileName,`
+- `src/backend/base/langflow/api/v1/files.py:129` - resolved
+  > `"Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",`
+
+---
+
+## 31. Generated API key written in plaintext to on-disk MCP JSON config file  
+**Verdict:** `needs-review`  |  **Severity:** `medium`  |  **Class:** CWE-312  |  **Rule:** `codeguard-py-sensitive-data-exposure`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `install_mcp_config` (line 789)
+- **Fingerprint:** `fp_cdafff7e10482f6b`
+
+The freshly-generated Langflow API key is appended to the args list at line 790 and that list is then serialised via json.dump into a config file at lines 859-860. This stores the credential in plaintext outside the application's secret management boundary. Whether this is acceptable depends on the threat model for the target machine, but the trigger condition (a secret value exposed without encryption/redaction) is satisfied.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:789` - resolved
+  > `langflow_api_key = api_key_response.api_key`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:790` - resolved
+  > `args.extend(["--headers", "x-api-key", langflow_api_key])`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:860` - resolved
+  > `json.dump(existing_config, f, indent=2)`
+
+---
+
+## 32. URL-decoded filename from caller URI passed to storage service without sanitization  
+**Verdict:** `needs-review`  |  **Severity:** `medium`  |  **Class:** CWE-22  |  **Rule:** `codeguard-py-path-traversal`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_utils.py` - `handle_read_resource` (line 177)
+- **Fingerprint:** `fp_3c810b1f8ac7f2c9`
+
+The filename is extracted from a caller-supplied URI, URL-decoded via `unquote()`, and forwarded directly to `storage_service.get_file()` without any path-containment check (e.g., `os.path.commonpath` against a fixed base). If the storage service resolves the filename against a local filesystem path, sequences like `../../etc/passwd` (double-encoded in the URI) could escape the intended directory. Exploitability depends on the storage service implementation, which is not visible here.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_utils.py:177` - resolved
+  > `filename = unquote(path_parts[-1])  # URL decode the filename`
+- `src/backend/base/langflow/api/v1/mcp_utils.py:182` - resolved
+  > `content = await storage_service.get_file(flow_id=flow_id, file_name=filename)`
+
+---
+
+## 33. Generic HTTPException(500, str(exc)) pattern — excluded by do_not_trigger_when  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/chat.py` - `build_public_tmp` (line 647)
+- **Fingerprint:** `fp_9b9b5fabb4d608c2`
+
+The error path at line 651 is exactly the generic `raise HTTPException(status_code=500, detail=str(exc)) from exc` pattern inside a broad `except Exception as exc` block, which the do_not_trigger_when criteria explicitly exclude as a pervasive low-value systemic pattern.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/chat.py:647` - resolved
+  > `except Exception as exc:`
+- `src/backend/base/langflow/api/v1/chat.py:651` - resolved
+  > `raise HTTPException(status_code=500, detail=str(exc)) from exc`
+
+---
+
+## 34. Profile picture download is intentionally unauthenticated  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/files.py` - `download_profile_picture` (line 181)
+- **Fingerprint:** `fp_7949770cff45b81d`
+
+Profile picture endpoints are a universally accepted public resource—browsers must fetch them to render avatars in login pages and public user profiles without a session. The handler applies multiple path-traversal guards (lines 181, 192, 200-207) and restricts access to an allowlisted folder set, demonstrating intentional hardening of this public endpoint rather than a missing control.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/files.py:181` - resolved
+  > `if ".." in folder_name or ".." in file_name:`
+- `src/backend/base/langflow/api/v1/files.py:187` - resolved
+  > `allowed_folders = _get_allowed_profile_picture_folders(settings_service)`
+- `src/backend/base/langflow/api/v1/files.py:188` - resolved
+  > `if folder_name not in allowed_folders:`
+
+---
+
+## 35. Listing profile picture names is low-sensitivity and likely intentional  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/files.py` - `list_profile_pictures` (line 252)
+- **Fingerprint:** `fp_511ce69c8d463dbb`
+
+The endpoint enumerates filenames from an allowlisted set of predefined folders containing only profile picture assets. The data exposed (avatar filenames within fixed folders) carries negligible sensitivity and is required for public-facing UI components. No secrets, user data, or private paths are disclosed.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/files.py:252` - resolved
+  > `allowed_folders = _get_allowed_profile_picture_folders(settings_service)`
+- `src/backend/base/langflow/api/v1/files.py:260` - resolved
+  > `results += [f"{folder}/{f.name}" for f in p.iterdir() if f.is_file()]`
+- `src/backend/base/langflow/api/v1/files.py:274` - resolved
+  > `return {"files": results}`
+
+---
+
+## 36. read_public_flow is intentionally unauthenticated with access_type guard  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/flows.py` - `read_public_flow` (line 411)
+- **Fingerprint:** `fp_04b30dd2886b9dab`
+
+The endpoint is explicitly designed to serve publicly shared flows. It enforces the `AccessTypeEnum.PUBLIC` check at line 412; Python enum identity comparison with `is not` is correct because enum members are singletons. The 403 rejection for non-public flows provides the required access control, making unauthenticated access intentional and bounded.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/flows.py:411` - resolved
+  > `access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()`
+- `src/backend/base/langflow/api/v1/flows.py:412` - resolved
+  > `if access_type is not AccessTypeEnum.PUBLIC:`
+- `src/backend/base/langflow/api/v1/flows.py:413` - resolved
+  > `raise HTTPException(status_code=403, detail="Flow is not public")`
+
+---
+
+## 37. Content-Disposition filename is server-generated timestamp, not user input  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-113  |  **Rule:** `codeguard-py-header-injection`
+
+- **Location:** `src/backend/base/langflow/api/v1/flows.py` - `download_multiple_file` (line 643)
+- **Fingerprint:** `fp_d967835486453638`
+
+The `filename` variable used in the `Content-Disposition` header is constructed entirely from `datetime.now().strftime("%Y%m%d_%H%M%S")`, a fixed-format server-generated timestamp with no external input. There is no user-controlled data path into this header value.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/flows.py:643` - resolved
+  > `current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")`
+- `src/backend/base/langflow/api/v1/flows.py:644` - resolved
+  > `filename = f"{current_time}_langflow_flows.zip"`
+- `src/backend/base/langflow/api/v1/flows.py:649` - resolved
+  > `headers={"Content-Disposition": f"attachment; filename={filename}"},`
+
+---
+
+## 38. read_basic_examples is intentionally public starter content  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/flows.py` - `read_basic_examples` (line 676)
+- **Fingerprint:** `fp_3e3e012805fb63df`
+
+Starter/example flows are onboarding assets designed to be displayed to unauthenticated or newly registered users. The endpoint reads only from the `STARTER_FOLDER_NAME` folder (line 676) and returns `FlowRead` objects, which represent curated example content rather than private user data.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/flows.py:676` - resolved
+  > `starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()`
+- `src/backend/base/langflow/api/v1/flows.py:682` - resolved
+  > `all_starter_folder_flows = (await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))).all()`
+
+---
+
+## 39. Delete redirect handler — authorization enforced at destination  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/folders.py` - `delete_folder_redirect` (line 78)
+- **Fingerprint:** `fp_32f07af1c8d9f761`
+
+The handler at lines 73–78 performs only a 307 redirect to `/api/v1/projects/{folder_id}`; no data is read or deleted by this handler itself. The 307 status preserves the HTTP method, and the actual destructive operation — along with its authorization check — is handled by the destination endpoint. The missing-authz rule requires the operation itself to be sensitive; a pure redirect is not.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/folders.py:78` - resolved
+  > `return RedirectResponse(url=f"/api/v1/projects/{folder_id}", status_code=status.HTTP_307_TEMPORARY_REDIRECT)`
+
+---
+
+## 40. Download redirect handler — authorization enforced at destination  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/folders.py` - `download_file_redirect` (line 87)
+- **Fingerprint:** `fp_bb9a06cf3846ad0e`
+
+Like candidate 2, this handler only issues a 307 redirect to `/api/v1/projects/download/{folder_id}` and performs no file-access operation itself. The authorization decision is deferred to the target endpoint. A redirect-only handler is not a sensitive operation by itself.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/folders.py:87` - resolved
+  > `return RedirectResponse(`
+- `src/backend/base/langflow/api/v1/folders.py:88` - resolved
+  > `url=f"/api/v1/projects/download/{folder_id}", status_code=status.HTTP_307_TEMPORARY_REDIRECT`
+
+---
+
+## 41. store_api_key cookie — intentional client-side delivery  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-312  |  **Rule:** `codeguard-py-sensitive-data-exposure`
+
+- **Location:** `src/backend/base/langflow/api/v1/login.py` - `login_to_get_access_token` (line 61)
+- **Fingerprint:** `fp_1bca95fb88122b82`
+
+Setting the `apikey_tkn_lflw` cookie is the deliberate mechanism by which the frontend receives the user's store API key for subsequent marketplace requests. Returning an API key to its owner as a cookie is standard practice and does not constitute unintended sensitive-data exposure. There is no indication this key is a server-side secret that should be withheld from the authenticated user.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/login.py:61` - resolved
+  > `"apikey_tkn_lflw",`
+- `src/backend/base/langflow/api/v1/login.py:62` - resolved
+  > `str(user.store_api_key),`
+
+---
+
+## 42. auto_login is intentionally unauthenticated by design  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-862  |  **Rule:** `codeguard-py-missing-authz`
+
+- **Location:** `src/backend/base/langflow/api/v1/login.py` - `auto_login` (line 91)
+- **Fingerprint:** `fp_1895ac537897ffdb`
+
+The handler explicitly checks `auth_settings.AUTO_LOGIN` at line 91 and raises HTTP 400 when it is disabled (lines 124–130). When `AUTO_LOGIN` is `True`, issuing tokens to any caller is the declared intent of the feature. The absence of an auth dependency is not a defect here — it is the mechanism that implements the auto-login mode. The trigger condition ('sensitive operation') is not met because token issuance is the advertised, gated purpose of this endpoint.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/login.py:91` - resolved
+  > `if auth_settings.AUTO_LOGIN:`
+- `src/backend/base/langflow/api/v1/login.py:124` - resolved
+  > `raise HTTPException(`
+- `src/backend/base/langflow/api/v1/login.py:127` - resolved
+  > `"message": "Auto login is disabled. Please enable it in the settings",`
+
+---
+
+## 43. store_api_key cookie in auto_login — intentional client-side delivery  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-312  |  **Rule:** `codeguard-py-sensitive-data-exposure`
+
+- **Location:** `src/backend/base/langflow/api/v1/login.py` - `auto_login` (line 110)
+- **Fingerprint:** `fp_fc85a1263a1b5153`
+
+Identical reasoning to candidate 8: the `apikey_tkn_lflw` cookie at lines 110–111 is the deliberate mechanism for delivering the user's store API key to the frontend. The code even guards the case where the key is `None` (lines 106–107) before converting to string, confirming this is intentional and controlled behaviour rather than unintended exposure.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/login.py:110` - resolved
+  > `"apikey_tkn_lflw",`
+- `src/backend/base/langflow/api/v1/login.py:111` - resolved
+  > `str(user.store_api_key),  # Ensure it's a string`
+
+---
+
+## 44. BrokenResourceError message in 404 response — low-sensitivity exception type  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp.py` - `handle_messages` (line 151)
+- **Fingerprint:** `fp_ea35ef0a10d3d9b3`
+
+`BrokenResourceError` and `BrokenPipeError` (line 151) are anyio/asyncio transport-layer exceptions signalling a closed connection; their string representation is typically a brief, non-sensitive message (e.g. 'Broken resource') that does not embed SQL queries, absolute paths, or connection strings. The do_not_trigger_when criterion — 'the detail is a controlled, user-facing validation message on a 4xx path' — is satisfied here since the 404 response and its context are diagnostic of a disconnected transport, not an internal system error.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp.py:151` - resolved
+  > `except (BrokenResourceError, BrokenPipeError) as e:`
+- `src/backend/base/langflow/api/v1/mcp.py:153` - resolved
+  > `raise HTTPException(status_code=404, detail=f"MCP Server disconnected, error: {e}") from e`
+
+---
+
+## 45. Speculative secret leak via str(e) — not substantiated by shown code  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-312  |  **Rule:** `codeguard-py-sensitive-data-exposure`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `_build_project_tools_response` (line 277)
+- **Fingerprint:** `fp_c48c0ff468e8cd6f`
+
+The candidate hypothesises that `str(e)` at line 290 could contain decrypted `oauth_client_secret` or `api_key` values. In Python, `str(e)` renders only the exception's message string, not local variables in scope at the point the exception was raised. Nothing in the shown lines 277–290 constructs an exception whose message text includes the decrypted secret values; the claim is speculative and not supported by the visible code.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:277` - resolved
+  > `decrypted_settings = decrypt_auth_settings(project.auth_settings)`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:290` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 46. Generic str(e) on broad except Exception — systemic pattern, excluded by rule  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `_build_project_tools_response` (line 287)
+- **Fingerprint:** `fp_8fbd002d25948c1c`
+
+Line 290 is exactly the pattern described in the do_not_trigger_when clause: `HTTPException(status_code=500, detail=str(e))` inside a broad `except Exception as e` block. The rule explicitly states this pervasive, low-value systemic pattern must NOT generate a per-endpoint finding. Verdict is false-positive per the rule's own exclusion.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:287` - resolved
+  > `except Exception as e:`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:290` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 47. Generic str(e) on broad except Exception — systemic pattern, excluded by rule  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `update_project_mcp_settings` (line 578)
+- **Fingerprint:** `fp_727e8a44c61b7a68`
+
+Line 585 is `HTTPException(status_code=500, detail=str(e))` inside a broad `except Exception as e` block, which is exactly the pattern the do_not_trigger_when clause mandates must be treated as a false-positive. No additional context (tracebacks, repr, concatenated internal identifiers) is present beyond the bare exception string.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:578` - resolved
+  > `except Exception as e:`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:585` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 48. Generic str(e) on broad except Exception — systemic pattern, excluded by rule  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `install_mcp_config` (line 862)
+- **Fingerprint:** `fp_1f34a2a28a4b7493`
+
+Line 867 is `HTTPException(status_code=500, detail=str(e))` inside a broad `except Exception as e` block that explicitly re-raises HTTPExceptions (line 862). This is the canonical systemic pattern that the do_not_trigger_when clause mandates treating as a false-positive, with no additional traceback or internal-identifier concatenation present.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:862` - resolved
+  > `except HTTPException:`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:864` - resolved
+  > `except Exception as e:`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:867` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 49. Generic str(e) on broad except Exception — systemic pattern, excluded by rule  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `check_installed_mcp_servers` (line 1032)
+- **Fingerprint:** `fp_c9864704ecec3b62`
+
+Line 1035 is `HTTPException(status_code=500, detail=str(e))` inside a broad `except Exception as e` block (line 1032). This matches the do_not_trigger_when exclusion exactly. No traceback rendering, `!r` conversion, or concatenation with absolute paths or connection strings is present.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:1032` - resolved
+  > `except Exception as e:`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:1035` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 50. Windows username from OS, not attacker-supplied input  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-22  |  **Rule:** `codeguard-py-path-traversal`
+
+- **Location:** `src/backend/base/langflow/api/v1/mcp_projects.py` - `get_config_path` (line 1104)
+- **Fingerprint:** `fp_58c43785e7bfcbe3`
+
+The only external input is `client`, which is validated against fixed string literals before any path is constructed. The value interpolated into the path at line 1113 is `windows_username`, sourced from the Windows OS via `cmd.exe echo %USERNAME%`—not from the HTTP caller. Windows usernames are prohibited by the OS from containing `/` characters, making `../` traversal structurally impossible.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/mcp_projects.py:1104` - resolved
+  > `"echo %USERNAME%",`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:1111` - resolved
+  > `windows_username = stdout.decode().strip()`
+- `src/backend/base/langflow/api/v1/mcp_projects.py:1113` - resolved
+  > `f"/mnt/c/Users/{windows_username}/AppData/Roaming/Claude/claude_desktop_config.json"`
+
+---
+
+## 51. Folder ownership is verified before flows query  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/projects.py` - `download_file` (line 597)
+- **Fingerprint:** `fp_4a5a839422d07592`
+
+The initial folder query at line 597 explicitly filters by both `Folder.id == project_id` AND `Folder.user_id == current_user.id`, and execution halts with a 404 if no matching folder is found. The subsequent flows query uses the same `project_id` that was already confirmed to belong to the authenticated user. There is no code path where flows from another user's folder can be reached.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/projects.py:597` - resolved
+  > `query = select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)`
+- `src/backend/base/langflow/api/v1/projects.py:601` - resolved
+  > `if not project:`
+- `src/backend/base/langflow/api/v1/projects.py:602` - resolved
+  > `raise HTTPException(status_code=404, detail="Project not found")`
+
+---
+
+## 52. project.name is URL-encoded via quote() before header insertion  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-113  |  **Rule:** `codeguard-py-header-injection`
+
+- **Location:** `src/backend/base/langflow/api/v1/projects.py` - `download_file` (line 622)
+- **Fingerprint:** `fp_bbb045d7cf6ec02c`
+
+The `project.name` is incorporated into `filename` and then processed through `quote(filename)` (line 625), which percent-encodes all non-safe characters including CR (`%0D`) and LF (`%0A`). The header uses the RFC 5987 `filename*=UTF-8''<encoded>` format which is designed to carry percent-encoded values safely; no unencoded name is placed in the header directive.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/projects.py:622` - resolved
+  > `filename = f"{current_time}_{project.name}_flows.zip"`
+- `src/backend/base/langflow/api/v1/projects.py:625` - resolved
+  > `encoded_filename = quote(filename)`
+- `src/backend/base/langflow/api/v1/projects.py:630` - resolved
+  > `headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}`
+
+---
+
+## 53. Generic HTTPException(500, str(e)) pattern excluded by do_not_trigger_when  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/validate.py` - `post_validate_code` (line 21)
+- **Fingerprint:** `fp_732cab8db8a11465`
+
+The exception handler at line 23 raises `HTTPException(status_code=500, detail=str(e))`, which is precisely the generic systemic pattern that the rule's `do_not_trigger_when` clause excludes: 'the only leak is the generic HTTPException(status_code=5xx, detail=str(e)) form … This is a pervasive, low-value systemic pattern'. Per the rule, this must be a false-positive.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/validate.py:21` - resolved
+  > `except Exception as e:`
+- `src/backend/base/langflow/api/v1/validate.py:23` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 54. Generic HTTPException(500, str(e)) pattern excluded by do_not_trigger_when  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/validate.py` - `post_validate_prompt` (line 49)
+- **Fingerprint:** `fp_6996f6717d0c2f40`
+
+The exception handler at line 50 raises `HTTPException(status_code=500, detail=str(e))`, exactly matching the excluded systemic pattern. The rule explicitly states this form must not produce a per-endpoint finding. Verdict must be false-positive.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/validate.py:49` - resolved
+  > `except Exception as e:`
+- `src/backend/base/langflow/api/v1/validate.py:50` - resolved
+  > `raise HTTPException(status_code=500, detail=str(e)) from e`
+
+---
+
+## 55. user_id ownership filter is explicitly passed to the service layer  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/variable.py` - `update_variable` (line 81)
+- **Fingerprint:** `fp_6891a4a850ef6aa5`
+
+The trigger condition requires 'NO check that the object belongs to the authenticated user (no user_id filter, no ownership assertion)'. Here, `current_user.id` is explicitly passed as `user_id` to `variable_service.update_variable_fields(user_id=current_user.id, variable_id=variable_id, ...)`, constituting an ownership assertion delegated to the service. The trigger condition is not met.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/variable.py:81` - resolved
+  > `return await variable_service.update_variable_fields(`
+- `src/backend/base/langflow/api/v1/variable.py:82` - resolved
+  > `user_id=current_user.id,`
+- `src/backend/base/langflow/api/v1/variable.py:83` - resolved
+  > `variable_id=variable_id,`
+
+---
+
+## 56. user_id ownership filter is explicitly passed to the service layer  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-639  |  **Rule:** `codeguard-py-idor-missing-ownership`
+
+- **Location:** `src/backend/base/langflow/api/v1/variable.py` - `delete_variable` (line 104)
+- **Fingerprint:** `fp_55006b933e7be216`
+
+The trigger condition requires no ownership assertion at all. `delete_variable_by_id` is invoked with `user_id=current_user.id` alongside `variable_id`, providing an explicit ownership scope for the deletion. The trigger condition ('NO check that the object belongs to the authenticated user') is not satisfied.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/variable.py:104` - resolved
+  > `await variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)`
+
+---
+
+## 57. OpenAI API key returned for legitimate downstream use, not exposed externally  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-312  |  **Rule:** `codeguard-py-sensitive-data-exposure`
+
+- **Location:** `src/backend/base/langflow/api/v1/voice_mode.py` - `authenticate_and_get_openai_key` (line 108)
+- **Fingerprint:** `fp_a961d37eb07cb763`
+
+The key is retrieved from secure storage (variable service or environment) and returned to the caller solely so it can be used to authenticate a WebSocket connection to OpenAI. No logging of the key value is present; line 120 only logs the error, not the key. Returning a credential internally for its intended purpose is not a CWE-312 violation.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/voice_mode.py:108` - resolved
+  > `openai_key = openai_key_value if openai_key_value is not None else os.getenv("OPENAI_API_KEY", "")`
+- `src/backend/base/langflow/api/v1/voice_mode.py:120` - resolved
+  > `await logger.aerror(f"Error with API key: {e}")`
+
+---
+
+## 58. json.JSONDecodeError messages are generic and do not expose sensitive system internals  
+**Verdict:** `false-positive`  |  **Severity:** `none`  |  **Class:** CWE-209  |  **Rule:** `codeguard-py-error-info-leak`
+
+- **Location:** `src/backend/base/langflow/api/v1/voice_mode.py` - `handle_function_call` (line 459)
+- **Fingerprint:** `fp_a048f70503ce322f`
+
+`json.JSONDecodeError` messages report positional parse failure info (e.g., 'Expecting value: line 1 column 1 (char 0)') and do not embed SQL, filesystem paths, connection strings, or environment values. The `{e!s}` conversion (not `!r`) is used, and the exception does not originate from a database, ORM, filesystem, subprocess, or network client layer—it originates from parsing the caller-supplied `function_call_args` string. None of the `trigger_when` conditions that specify sensitive-origin leakage are met.
+
+**Evidence (citations):**
+
+- `src/backend/base/langflow/api/v1/voice_mode.py:459` - resolved
+  > `except json.JSONDecodeError as e:`
+- `src/backend/base/langflow/api/v1/voice_mode.py:467` - resolved
+  > `"output": f"Error parsing arguments: {e!s}",`
+
+---

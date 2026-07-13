@@ -1,0 +1,357 @@
+{
+  "run_id": "base_65501a94d97f",
+  "meta": {
+    "run_id": "base_65501a94d97f",
+    "target": "langflow",
+    "pinned_ref": "1.7.3",
+    "model": "claude-sonnet-4-6",
+    "backend": "cursor",
+    "files_in_scope": 26,
+    "total_tokens": 213121,
+    "duration_s": 472.8,
+    "parse_ok": true,
+    "raw_findings": 15
+  },
+  "usage": {
+    "input_tokens": 103399,
+    "output_tokens": 6327,
+    "total_tokens": 213121
+  },
+  "findings": [
+    {
+      "file": "src/backend/base/langflow/helpers/flow.py",
+      "line": 327,
+      "class": "CWE-94",
+      "severity": "critical",
+      "verdict": "true-positive",
+      "title": "Code injection via exec() with user-controlled flow vertex display names",
+      "rationale": "generate_function_for_flow builds a Python function body string by interpolating vertex display_name values (line 296) into arg_mappings without sanitization, then compiles and exec()s the result with the module's full globals(). An authenticated user can create a flow whose input node display_name contains a quote character followed by arbitrary Python (e.g. '\": __import__(\"os\").system(\"id\") #') to break out of the string literal in the generated tweaks dict and execute arbitrary OS commands with server-level privileges. This is reachable whenever a flow-as-tool component processes a flow whose inputs were attacker-crafted.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 296,
+          "quote": "        f'\"{original_name}\": {name}'"
+        },
+        {
+          "file": "src/backend/base/langflow/helpers/flow.py",
+          "line": 327,
+          "quote": "    exec(compiled_func, globals(), local_scope)  # noqa: S102"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 138,
+      "class": "CWE-862",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "Unauthenticated image file download \u2014 no auth dependency on /images endpoint",
+      "rationale": "The download_image route carries no authentication dependency and performs no flow-ownership check. Any unauthenticated caller who knows a flow_id UUID and the stored filename can retrieve image files from Langflow storage. The companion download_file endpoint at line 106 correctly gates access via the get_flow dependency that checks current user ownership; this endpoint omits that gate entirely.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 138,
+          "quote": "@router.get(\"/images/{flow_id}/{file_name}\")"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 139,
+          "quote": "async def download_image("
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 140,
+          "quote": "    file_name: ValidatedFileName,"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 141,
+          "quote": "    flow_id: UUID,"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "line": 693,
+      "class": "CWE-348",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "X-Forwarded-For spoofing bypasses local-only restriction on MCP config install",
+      "rationale": "install_mcp_config is supposed to be callable only from localhost, but get_client_ip unconditionally trusts the X-Forwarded-For header. An authenticated remote attacker who sends X-Forwarded-For: 127.0.0.1 passes the is_local_ip check and can remotely invoke the endpoint, which reads and overwrites JSON config files on the server filesystem (e.g. ~/.cursor/mcp.json) for Cursor, Windsurf, or Claude \u2014 a write-to-filesystem primitive from the network.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 670,
+          "quote": "    forwarded_for = request.headers.get(\"X-Forwarded-For\")"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 673,
+          "quote": "        return forwarded_for.split(\",\")[0].strip()"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_projects.py",
+          "line": 693,
+          "quote": "    if not is_local_ip(client_ip):"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+      "line": 400,
+      "class": "CWE-22",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "Path traversal in knowledge-base delete allows shutil.rmtree on arbitrary server directories",
+      "rationale": "delete_knowledge_base constructs kb_path = kb_root_path / kb_user / kb_name where kb_name comes directly from the URL path parameter. Python's pathlib does not sanitise .. components in individual path segments, so an authenticated user passing kb_name=../../etc causes the constructed path to resolve outside the intended directory. The exists()/is_dir() guards follow symlinks and traversal, so a real target directory passes the check; shutil.rmtree then recursively deletes it. The bulk endpoint (line 422) has the same flaw via kb_path = kb_user_path / kb_name.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 394,
+          "quote": "        kb_path = kb_root_path / kb_user / kb_name"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 400,
+          "quote": "        shutil.rmtree(kb_path)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+      "line": 359,
+      "class": "CWE-22",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "Path traversal in knowledge-base GET allows reading/probing arbitrary filesystem paths",
+      "rationale": "get_knowledge_base constructs the path from the unsanitised kb_name URL parameter (kb_path = kb_root_path / kb_user / kb_name) and then opens and reads JSON files, queries the Chroma vector store, and returns metadata about the resolved directory. An authenticated user can traverse to other users' knowledge-base directories (e.g. ../victim_user/secret_kb) or probe for the existence of server filesystem paths.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/knowledge_bases.py",
+          "line": 359,
+          "quote": "        kb_path = kb_root_path / kb_user / kb_name"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/api_key.py",
+      "line": 50,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "IDOR: any authenticated user can delete any other user's API key",
+      "rationale": "delete_api_key_route requires only that the caller is an active user (via the dependencies list) but passes api_key_id directly to delete_api_key without checking that the key belongs to the requesting user. Because API key UUIDs are the sole access control, an authenticated user who discovers another user's api_key_id (e.g. through the monitor or a separate info-leak) can permanently revoke it.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 44,
+          "quote": "@router.delete(\"/{api_key_id}\", dependencies=[Depends(auth_utils.get_current_active_user)])"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/api_key.py",
+          "line": 50,
+          "quote": "        await delete_api_key(db, api_key_id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/endpoints.py",
+      "line": 878,
+      "class": "CWE-94",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "Arbitrary server-side Python execution via custom component endpoint",
+      "rationale": "The /custom_component and /custom_component/update endpoints accept raw Python source code from any authenticated user, pass it to Component(_code=raw_code.code), and then call build_custom_component_template which compiles and executes the code on the server. Any authenticated user can thereby run arbitrary Python\u2014reading secrets from the environment, accessing the database directly, or exfiltrating data\u2014without any code sandboxing. This is a deliberate design feature of Langflow but represents a high-severity risk in multi-tenant or internet-facing deployments.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 873,
+          "quote": "@router.post(\"/custom_component\", status_code=HTTPStatus.OK)"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 878,
+          "quote": "    component = Component(_code=raw_code.code)"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/endpoints.py",
+          "line": 880,
+          "quote": "    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 107,
+      "class": "CWE-639",
+      "severity": "high",
+      "verdict": "true-positive",
+      "title": "IDOR: authenticated user can delete any message by UUID",
+      "rationale": "delete_messages accepts a caller-supplied list of MessageTable UUIDs and issues a DELETE without checking that any of the targeted messages belong to a flow owned by the requesting user. An authenticated attacker who knows or enumerates message UUIDs can destroy another user's conversation history. No user-scoped subquery (such as the one used in get_messages at line 81) is applied here.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 104,
+          "quote": "@router.delete(\"/messages\", status_code=204, dependencies=[Depends(get_current_active_user)])"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 107,
+          "quote": "        await session.exec(delete(MessageTable).where(MessageTable.id.in_(message_ids)))  # type: ignore[attr-defined]"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 119,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "IDOR: authenticated user can overwrite any message record by UUID",
+      "rationale": "update_message fetches a MessageTable row by the caller-supplied message_id UUID and updates its fields without checking that the message's flow_id belongs to a flow owned by the requesting user. Any authenticated user can tamper with another user's chat messages (e.g. alter text, mark as edited).",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 112,
+          "quote": "@router.put(\"/messages/{message_id}\", dependencies=[Depends(get_current_active_user)], response_model=MessageRead)"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 119,
+          "quote": "        db_message = await session.get(MessageTable, message_id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 183,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "IDOR: authenticated user can delete any session's messages by session_id",
+      "rationale": "delete_messages_session deletes all MessageTable rows matching the caller-supplied session_id string without scoping the deletion to the requesting user's flows. An authenticated attacker can wipe another user's entire conversation session. The analogous get_messages endpoint correctly applies a user-scoped subquery (line 81) but this DELETE path omits it.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 176,
+          "quote": "@router.delete(\"/messages/session/{session_id}\", status_code=204, dependencies=[Depends(get_current_active_user)])"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 183,
+          "quote": "            .where(col(MessageTable.session_id) == session_id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 151,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "IDOR: authenticated user can reassign any session's messages to a new session_id",
+      "rationale": "update_session_id fetches all MessageTable rows matching old_session_id and bulk-updates them to new_session_id without verifying the session belongs to a flow owned by the requesting user. An attacker can move another user's messages into their own session namespace or merge victim conversations.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 139,
+          "quote": "@router.patch("
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 151,
+          "quote": "        stmt = select(MessageTable).where(MessageTable.session_id == old_session_id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 28,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "IDOR: authenticated user can read or delete vertex build data for any flow",
+      "rationale": "get_vertex_builds and delete_vertex_builds both accept a caller-supplied flow_id query parameter and query the vertex_build table for that flow ID without verifying that the flow belongs to the requesting user. An authenticated attacker can enumerate build logs or wipe build state for any other user's flow by supplying its UUID.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 27,
+          "quote": "@router.get(\"/builds\", dependencies=[Depends(get_current_active_user)])"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 30,
+          "quote": "        vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id)"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 36,
+          "quote": "@router.delete(\"/builds\", status_code=204, dependencies=[Depends(get_current_active_user)])"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/monitor.py",
+      "line": 200,
+      "class": "CWE-639",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "IDOR: authenticated user can read transaction history for any flow",
+      "rationale": "get_transactions queries TransactionTable by the caller-supplied flow_id UUID without verifying that the flow belongs to the requesting user. An authenticated attacker can exfiltrate execution timestamps, input/output data, and error messages from another user's flows.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 193,
+          "quote": "@router.get(\"/transactions\", dependencies=[Depends(get_current_active_user)])"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/monitor.py",
+          "line": 202,
+          "quote": "            .where(TransactionTable.flow_id == flow_id)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+      "line": 340,
+      "class": "CWE-285",
+      "severity": "medium",
+      "verdict": "true-positive",
+      "title": "Global MCP tool/resource listing exposes all users' flows cross-tenant",
+      "rationale": "When handle_list_tools and handle_list_resources are called without a project_id (i.e. from the global /mcp/sse and /mcp/streamable endpoints), the queries are select(Flow) with no user_id filter, returning flows from every user in the database. Any user authenticated to the global MCP endpoint can enumerate flow names, descriptions, and IDs belonging to all other tenants.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 339,
+          "quote": "                # Get all flows"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 340,
+          "quote": "                flows_query = select(Flow)"
+        },
+        {
+          "file": "src/backend/base/langflow/api/v1/mcp_utils.py",
+          "line": 104,
+          "quote": "            flows_query = select(Flow).where(Flow.folder_id == project_id) if project_id else select(Flow)"
+        }
+      ]
+    },
+    {
+      "file": "src/backend/base/langflow/api/v1/files.py",
+      "line": 129,
+      "class": "CWE-113",
+      "severity": "medium",
+      "verdict": "needs-review",
+      "title": "Unquoted filename in Content-Disposition header may allow header injection",
+      "rationale": "The Content-Disposition value is constructed with the file_name parameter unquoted (filename=<value>). RFC 6266 requires the value be a quoted-string or a token; without quotes, a filename containing semicolons or CRLF characters can inject additional header parameters or split the HTTP response header. The risk depends entirely on whether ValidatedFileName permits semicolons or CR/LF characters.",
+      "evidence": [
+        {
+          "file": "src/backend/base/langflow/api/v1/files.py",
+          "line": 129,
+          "quote": "            \"Content-Disposition\": f\"attachment; filename={file_name} filename*=UTF-8''{file_name}\","
+        }
+      ]
+    }
+  ]
+}

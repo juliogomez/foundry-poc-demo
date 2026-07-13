@@ -1,0 +1,46 @@
+id: codeguard-py-error-info-leak
+description: |
+  Detect internal exception detail returned to API clients in a way that leaks
+  genuinely sensitive internals - stack traces, exception reprs, database/ORM
+  driver errors, filesystem paths, subprocess output, or connection/query strings.
+  Maps to CWE-209 (Generation of Error Message Containing Sensitive Information).
+
+  Provenance & calibration: added by the detection->prevention flywheel after the
+  agentic baseline surfaced verbose exception detail returned to clients. The first
+  version fired on the bare HTTPException(detail=str(e)) idiom, which Langflow uses
+  pervasively (~70 handlers) - a real but SYSTEMIC, low-signal convention, not a
+  per-endpoint defect. This version was sharpened (a flywheel "tune the rule" step)
+  to confirm only HIGH-sensitivity leaks and to treat the generic idiom as a single
+  systemic note instead of one finding per handler. See out/rule-gaps.jsonl.
+languages: [python]
+severity: medium
+weakness_class: CWE-209
+applies_to:
+  - an error path (except-block, error handler, or error response) that returns
+    exception-derived text to the caller (HTTPException detail, response body,
+    JSON message, or websocket error frame)
+trigger_when:
+  - the client-visible text includes a traceback (traceback.format_exc(), tb text,
+    or the raw exception rendered with its stack)
+  - the client-visible text includes repr(exc) or an f-string using the "!r"
+    conversion on the exception (exposes exception type and internal attributes)
+  - the leaked exception originates in a database/ORM layer, filesystem call,
+    subprocess, deserialization, or network client, whose message commonly embeds
+    SQL, absolute file paths, host/port, or connection strings
+  - the error string is concatenated with internal identifiers such as absolute
+    paths, SQL queries, connection URLs, or environment values
+do_not_trigger_when:
+  - the only leak is the generic HTTPException(status_code=5xx, detail=str(e)) form
+    (or an f-string detail that simply interpolates the exception) on a broad
+    "except Exception". This is a pervasive, low-value systemic pattern - record it
+    ONCE as a systemic hardening note, and do NOT emit a separate finding per endpoint.
+  - the detail is a controlled, user-facing validation message on a 4xx path
+  - the detail is a static or literal string, or an already-sanitized message
+example_positive: |
+  except Exception as exc:
+      raise HTTPException(status_code=500, detail=traceback.format_exc()) from exc
+  # or detail=repr(exc); or returning a raw psycopg / SQLAlchemy error to the client
+example_negative: |
+  # Pervasive generic idiom -> systemic note, NOT a per-endpoint finding:
+  except Exception as e:
+      raise HTTPException(status_code=500, detail=str(e)) from e

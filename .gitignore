@@ -1,0 +1,17 @@
+# Python virtual environment (all deps live here; deleting the repo removes everything)
+.venv/
+__pycache__/
+*.pyc
+
+# Cloned evaluation targets (fetched at demo time, never vendored)
+targets/
+
+# SQLite finding store / index
+*.db
+*.sqlite3
+
+# Local secrets (never commit CURSOR_API_KEY or any key)
+.env
+
+# OS noise
+.DS_Store

@@ -1,0 +1,64 @@
+# Foundry PoC Demo - NARROW (curated) configuration - a scale contrast.
+#
+# This is the smaller, hand-picked scope: 12 modules chosen one-by-one as the
+# highest-signal slice of the v1 attack surface (each entry is annotated with why).
+# The CANONICAL demo is the wide scope in config.yaml (the whole v1 API layer);
+# this narrow config exists to show how the governance wins change with scale -
+# e.g. at this size a single-shot baseline keeps up on breadth, while at full scope
+# it cannot. Artifacts land in out-narrow/ so both runs coexist.
+
+system:
+  name: "foundry-poc-narrow"
+
+target:
+  path: "targets/langflow"
+  include_globs:
+    - "src/backend/base/langflow/api/v1/validate.py"      # user code validation/exec surface
+    - "src/backend/base/langflow/api/v1/endpoints.py"     # public run endpoints (primary entry)
+    - "src/backend/base/langflow/api/v1/chat.py"          # build endpoints
+    - "src/backend/base/langflow/api/v1/files.py"         # upload/download (path traversal surface)
+    - "src/backend/base/langflow/api/v1/store.py"         # external store client (SSRF surface)
+    - "src/backend/base/langflow/api/v1/mcp.py"           # MCP endpoints (external surface)
+    - "src/backend/base/langflow/api/v1/login.py"         # auth surface
+    - "src/backend/base/langflow/api/v1/api_key.py"       # auth surface
+    - "src/backend/base/langflow/api/v1/users.py"         # authz surface
+    - "src/backend/base/langflow/api/v1/auth_helpers.py"  # auth helpers
+    - "src/backend/base/langflow/api/v1/variable.py"      # secrets/variable surface
+    - "src/backend/base/langflow/helpers/flow.py"         # compile()/exec() sink invoked by endpoints
+  exclude_globs:
+    - "**/tests/**"
+    - "**/__pycache__/**"
+  pinned_ref: "1.7.3"
+
+goals: |
+  Evaluate the target for server-side security defects reachable from external
+  input: code/command injection, SQL injection, SSRF, path traversal, unsafe
+  deserialization, and hardcoded secrets. In scope: all first-party backend
+  Python. Out of scope: frontend, tests, dependencies.
+
+llm:
+  backend: "cursor"
+  model: "claude-sonnet-4-6"
+  scratch_cwd: ".scratch"
+
+batching:
+  detector_max_units: 25
+  detector_max_lines: 1200
+  triage_batch_size: 20
+
+budget:
+  max_tokens: 1500000
+  yield_window: 12
+  yield_min_true_positive_rate: 0.05
+
+severity:
+  scheme: "low_medium_high_critical"
+
+rules:
+  corpus_dir: "rules"
+
+store:
+  db_path: "out-narrow/findings.db"
+  provenance_log: "out-narrow/provenance.jsonl"
+  reports_dir: "out-narrow/findings"
+  rule_gaps_log: "out-narrow/rule-gaps.jsonl"

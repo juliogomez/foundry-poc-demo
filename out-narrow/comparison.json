@@ -1,0 +1,88 @@
+{
+  "foundry": {
+    "n_findings": 16,
+    "n_confirmed": 3,
+    "structural_completeness": 1.0,
+    "confirmed_citation_resolution": 1.0,
+    "confirmed_hallucinated_citations": 0,
+    "hallucinated_citations_total": 0,
+    "duplicate_rate": 0.0,
+    "provenance_reconstructable": true,
+    "bounded_stop": "coverage-complete (all 107 units); trailing true-positive yield=0.25",
+    "raw_before_dedup": 16
+  },
+  "baseline": {
+    "n_findings": 10,
+    "n_confirmed": 7,
+    "structural_completeness": 1.0,
+    "confirmed_citation_resolution": 1.0,
+    "confirmed_hallucinated_citations": 0,
+    "hallucinated_citations_total": 0,
+    "duplicate_rate": 0.0,
+    "provenance_reconstructable": false,
+    "bounded_stop": "none (single unbounded agent turn)",
+    "raw_before_dedup": 10
+  },
+  "cross_run_stability": {
+    "runs": 2,
+    "distinct_fingerprints": 16,
+    "seen_in_multiple_runs": 14,
+    "per_run": [
+      [
+        "run_ad27b1000969",
+        16
+      ],
+      [
+        "run_2f61b23de3ec",
+        14
+      ]
+    ],
+    "naive_sum_if_no_dedup": 30
+  },
+  "flywheel": {
+    "baseline_classes": [
+      "CWE-113",
+      "CWE-209",
+      "CWE-22",
+      "CWE-287",
+      "CWE-306",
+      "CWE-312",
+      "CWE-639",
+      "CWE-94"
+    ],
+    "rules_at_run": 9,
+    "rules_now": 13,
+    "gap_at_run": [
+      "CWE-113",
+      "CWE-209",
+      "CWE-312",
+      "CWE-639"
+    ],
+    "closed_by_new_rules": [
+      "CWE-113",
+      "CWE-209",
+      "CWE-312",
+      "CWE-639"
+    ],
+    "still_open": [],
+    "new_rules": [
+      {
+        "id": "codeguard-py-error-info-leak",
+        "class": "CWE-209"
+      },
+      {
+        "id": "codeguard-py-header-injection",
+        "class": "CWE-113"
+      },
+      {
+        "id": "codeguard-py-idor-missing-ownership",
+        "class": "CWE-639"
+      },
+      {
+        "id": "codeguard-py-sensitive-data-exposure",
+        "class": "CWE-312"
+      }
+    ],
+    "exploratory_rule_gaps": 2
+  }
+}
