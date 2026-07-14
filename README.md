@@ -13,7 +13,7 @@ New here? Follow the guided path in order:
 4. **[CUSTOMIZATION.md](docs/CUSTOMIZATION.md)** - how `config.yaml` and `rules/` are your customized spec.
 5. **[WALKTHROUGH.md](docs/WALKTHROUGH.md)** - run it yourself, step by step.
 6. **[RESULTS.md](docs/RESULTS.md)** - the numbers from the real run.
-7. **[USE-ON-YOUR-OWN-REPO.md](docs/USE-ON-YOUR-OWN-REPO.md)** - point it at your own code.
+7. **[BUILD-YOUR-OWN.md](docs/BUILD-YOUR-OWN.md)** - take it to your own repo by building your own from the spec.
 
 In a hurry? Jump to the [Quickstart](#quickstart) or skim [What is inside the repo](#what-is-inside-the-repo). 
 
@@ -37,7 +37,7 @@ The Foundry spec is a *design*, not off-the-shelf runnable code. It ships as two
 
 This repo is **one worked PoC implementation** of that design: the result of answering
 the spec's `[NEEDS CLARIFICATION]` questions for a concrete case: to evaluate a real-world code repo (Langflow), using an LLM. You can (a) clone this repo and reproduce the exercise,
-or (b) use the spec to build your own implementation on your own stack. See
+or (b) use the spec to [build your own implementation](docs/BUILD-YOUR-OWN.md) on your own stack. See
 [ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the roles map and
 [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for the exact files that carry the
 customization.

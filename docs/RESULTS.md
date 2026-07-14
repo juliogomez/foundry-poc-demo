@@ -287,5 +287,6 @@ python -m foundry_poc.cli --config config-narrow.yaml run
 
 ## What to read next
 
-Next in the guided path: **[USE-ON-YOUR-OWN-REPO.md](USE-ON-YOUR-OWN-REPO.md)** - now
-that you have seen the numbers, point the harness at your own code base.
+Next in the guided path: **[BUILD-YOUR-OWN.md](BUILD-YOUR-OWN.md)** - now that you
+have seen the numbers, take these learnings to your own repo by building your own
+implementation from the spec.
