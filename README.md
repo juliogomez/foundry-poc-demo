@@ -7,15 +7,15 @@ This repo is a proof of concept. It implements the
 
 New here? Follow the guided path in order:
 
-1. **[VALUE.md](docs/VALUE.md)** - why it matters (the thesis).
-2. **[METHODOLOGY.md](docs/METHODOLOGY.md)** - the experiment design, the fair baseline, metrics defined up front.
+1. **[VALUE.md](docs/VALUE.md)** - why it matters.
+2. **[METHODOLOGY.md](docs/METHODOLOGY.md)** - the PoC design, the fair baseline, and metrics
 3. **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - how the Foundry roles map to the code.
 4. **[CUSTOMIZATION.md](docs/CUSTOMIZATION.md)** - how `config.yaml` and `rules/` are your customized spec.
-5. **[WALKTHROUGH.md](docs/WALKTHROUGH.md)** - run it yourself, step by step.
-6. **[RESULTS.md](docs/RESULTS.md)** - the numbers from the real run.
+5. **[WALKTHROUGH.md](docs/WALKTHROUGH.md)** - run it yourself.
+6. **[RESULTS.md](docs/RESULTS.md)** - the numbers from the real run
 7. **[BUILD-YOUR-OWN.md](docs/BUILD-YOUR-OWN.md)** - take it to your own repo by building your own from the spec.
 
-In a hurry? Jump to the [Quickstart](#quickstart) or skim [What is inside the repo](#what-is-inside-the-repo). 
+In a hurry? Jump to the [Quickstart](#quickstart) or [What is inside the repo](#what-is-inside-the-repo). 
 
 ## The value of this repo
 
