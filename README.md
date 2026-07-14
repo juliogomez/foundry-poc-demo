@@ -3,6 +3,20 @@
 This repo is a proof of concept. It implements the
 [Foundry security harness specification](https://github.com/CiscoDevNet/foundry-security-spec) and uses it to run a comparison (a small controlled experiment) against a real and complex code base, [Langflow](https://github.com/langflow-ai/langflow).
 
+## Start here
+
+New here? Follow the guided path in order:
+
+1. **[VALUE.md](docs/VALUE.md)** - why it matters (the thesis).
+2. **[METHODOLOGY.md](docs/METHODOLOGY.md)** - the experiment design, the fair baseline, metrics defined up front.
+3. **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - how the Foundry roles map to the code.
+4. **[CUSTOMIZATION.md](docs/CUSTOMIZATION.md)** - how `config.yaml` and `rules/` are your customized spec.
+5. **[WALKTHROUGH.md](docs/WALKTHROUGH.md)** - run it yourself, step by step.
+6. **[RESULTS.md](docs/RESULTS.md)** - the numbers from the real run.
+7. **[USE-ON-YOUR-OWN-REPO.md](docs/USE-ON-YOUR-OWN-REPO.md)** - point it at your own code.
+
+In a hurry? Jump to the [Quickstart](#quickstart) or skim [What is inside the repo](#what-is-inside-the-repo). 
+
 ## The value of this repo
 
 The Foundry spec is a *design*, not off-the-shelf runnable code. It ships as two documents:
@@ -139,18 +153,6 @@ metrics table, and a fully worked, auditable finding - live in
 defined *before* the run in [METHODOLOGY.md](docs/METHODOLOGY.md), need no ground
 truth, and are applied identically to both arms, so the comparison can not be gamed.
 A narrower 12-module run is included as a scale contrast (see the table below).
-
----
-
-## Read the docs in this order
-
-1. **[VALUE.md](docs/VALUE.md)** - why it matters.
-2. **[METHODOLOGY.md](docs/METHODOLOGY.md)** - PoC design, the baseline and the metrics defined
-3. **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - how the roles map to the code.
-4. **[CUSTOMIZATION.md](docs/CUSTOMIZATION.md)** - how `config.yaml` and `rules/` are your customized spec
-5. **[WALKTHROUGH.md](docs/WALKTHROUGH.md)** - run it yourself, step by step.
-6. **[RESULTS.md](docs/RESULTS.md)** - the numbers from the real run.
-7. **[USE-ON-YOUR-OWN-REPO.md](docs/USE-ON-YOUR-OWN-REPO.md)** - apply it to your own code repo.
 
 ---
 
