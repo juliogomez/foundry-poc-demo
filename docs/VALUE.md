@@ -79,7 +79,7 @@ Ask both the same question. Here is what each hands back:
 | Re-run it next week | a fresh, differently-worded blob you diff by hand | the **same stable fingerprints** - 67 distinct across two runs, not 122; what is new / recurring / gone is *computed*, not eyeballed |
 | "Why does this finding exist?" | re-read one long transcript and hope | a **per-finding provenance chain** to the exact detector + triager calls and the gate decision |
 | "Did it finish? what did it cost?" | it stopped when the model felt done; cost is whatever it was | a **declared stop** (all 289 units covered + trailing yield) under a **hard token cap** |
-| A missed weakness class, or a rule firing as noise | gone the moment you close the tab | becomes a **durable new or sharpened rule** (the flywheel: CWE-209 noise 72 -> 6; 4 gaps logged) |
+| A missed weakness class, or a rule firing as noise | gone the moment you close the tab | becomes a **durable new or sharpened rule** |
 | Prevent the bug at authoring time, org-wide | nothing to deploy | the **same CodeGuard rules** load into the coding assistant as guardrails |
 
 __The baseline gives you *an answer you have to trust*;

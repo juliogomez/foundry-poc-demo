@@ -36,8 +36,8 @@ The Foundry spec is a *design*, not off-the-shelf runnable code. It ships as two
   tool (see [VALUE.md](docs/VALUE.md#does-this-align-with-the-foundry-spec)).
 
 This repo is **one worked PoC implementation** of that design: the result of answering
-the spec's `[NEEDS CLARIFICATION]` questions for a concrete case: to evaluate a real-world code repo (Langflow), using an LLM. You can (a) clone this repo and reproduce the exercise,
-or (b) use the spec to [build your own implementation](docs/BUILD-YOUR-OWN.md) on your own stack. See
+the spec's `[NEEDS CLARIFICATION]` questions for a concrete case: to evaluate a real-world code repo (Langflow), using an LLM. You can (a) clone this repo and reproduce the example,
+or (b) use the Foundry spec to [build your own implementation](docs/BUILD-YOUR-OWN.md) on your own stack. See
 [ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the roles map and
 [CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for the exact files that carry the
 customization.
@@ -118,7 +118,7 @@ The remaining three are about the run as a whole rather than a single finding:
   when the session closes - and the same portable rule can move into a coding
   assistant like CodeGuard to prevent the class at authoring time.*
 
-__The same model pointed at the same code, but alone, gives you none of these reliably.__
+__The same model pointed at the same code, but alone without Foundry, gives you none of these reliably.__
 
 ## The demonstration
 

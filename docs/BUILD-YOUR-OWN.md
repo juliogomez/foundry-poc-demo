@@ -44,9 +44,9 @@ and implement against them - not to fork this PoC and hope its choices fit you.
 ## Optional: give it a try with this PoC first (NOT a production tool)
 
 If you just want to *feel* the pipeline on your own code before committing to your
-own implementation, you can reconfigure this reference engine and point it at a
-target. Treat this strictly as a quick experiment on a PoC - it is not a hardened
-scanner and it is not how you run a real program.
+own implementation, you can reconfigure this simple example and point it at a
+target. Treat this strictly as a quick experiment on a PoC - it is NOT a hardened
+scanner and it is NOT how you run a real program.
 
 ### 1. Make your code the target
 
@@ -136,10 +136,10 @@ rules, and run again. This is the flywheel of detection -> prevention working ov
 
 ## Things to keep in mind
 
-- **This is a PoC and a reference, not a product - and not a substitute for the
+- **This is an example PoC and a reference, not a product - and NOT a substitute at all for the
   spec.** It shows the structure and the value of the spec; it is not a hardened
   scanner, and reconfiguring it is a way to *learn*, not a way to operate a security
-  program. For that, build your own implementation from the spec (above). Treat its
+  program. For that, build your own implementation from the Foundry spec (above). Treat its
   `true-positive` findings like *verified, worth to review*, and its `needs-review`
   items like leads, not like final verdicts.
 - **The trust properties travel.** The evidence gate, the fingerprint dedup, the
